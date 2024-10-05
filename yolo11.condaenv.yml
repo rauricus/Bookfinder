@@ -1,0 +1,23 @@
+name: yolov8
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.12  ## Yolo might only support Python 3.8-3.11
+  - pip
+
+  - pytorch::pytorch
+  - torchvision
+  - torchaudio
+
+  - pandas
+  - matplotlib
+  - numpy<2.0.0
+
+  - ultralytics
+
+  - jupyter
+  - ipykernel  ## ChatGPT claims this is a prereq to use a Conda environment inside Jupyter
+
+  - pip:
+    - git+https://github.com/ultralytics/thop.git ## Yolo runs without it, but might need it for some tasks
