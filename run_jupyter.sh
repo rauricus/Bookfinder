@@ -3,7 +3,7 @@
 # Requires: micromamba
 
 
-CONDA_ENV="yolov11"
+CONDA_ENV="yolo11"
 NOTEBOOK_DIR="$HOME/Documents/Projekte/Objekterkennung.$CONDA_ENV/notebooks"
 
 # === INITIALIZATION ===
@@ -27,25 +27,12 @@ fi
 unset __mamba_setup
 
 
-# Function to check, if a specific conda environment exists
-#    See: https://stackoverflow.com/questions/70597896/check-if-conda-env-exists-and-create-if-not-in-bash
-conda_env_exists() {
-    micromamba env list | grep "${@}" >/dev/null 2>/dev/null
-}
-
-
 # === MAIN ===
 
-if conda_env_exists ".*$CONDA_ENV.*" ; then
+micromamba activate $CONDA_ENV
 
-    micromamba activate $CONDA_ENV
+mkdir -p $NOTEBOOK_DIR
 
-    mkdir -p $NOTEBOOK_DIR
-
-    jupyter notebook \
-        --notebook-dir=$NOTEBOOK_DIR --ip='*' --port=8888 \
-        --no-browser --allow-root
-
-else 
-    echo "+++ Conda environment '$CONDA_ENV' does not exist."
-fi
+jupyter notebook \
+    --notebook-dir=$NOTEBOOK_DIR --ip='*' --port=8888 \
+    --no-browser --allow-root
