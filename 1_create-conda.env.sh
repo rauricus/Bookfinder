@@ -45,3 +45,14 @@ else
 	echo
 	micromamba create -n $CONDA_ENV -f $CONDA_ENV_FILE
 fi
+
+# Activate conda env and check if Yolo is ok.
+micromamba activate $CONDA_ENV  
+
+echo "Running YOLO checks..."
+echo
+
+yolo checks
+
+echo
+echo "Done."
