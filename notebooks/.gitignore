@@ -1,0 +1,5 @@
+.ipynb_checkpoints
+# ignore downloaded YOLO models, sample files and the txt file, which gets always generated
+*.pt
+*.jpg
+untitled.txt
