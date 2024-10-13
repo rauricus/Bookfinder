@@ -16,6 +16,9 @@ dependencies:
 
   - ultralytics
 
+  - easyocr
+  - pytesseract
+
   - jupyter
   - ipykernel  ## ChatGPT claims this is a prereq to use a Conda environment inside Jupyter
 
