@@ -1,4 +1,4 @@
-name: yolov11
+name: yolo11
 channels:
   - conda-forge
   - pytorch
