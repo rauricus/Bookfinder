@@ -6,7 +6,7 @@ dependencies:
   - python=3.12  ## Yolo might only support Python 3.8-3.11
   - pip
 
-  - pytorch::pytorch
+  - pytorch::pytorch=2.3 ## Needed to avoid a bug during instance segmentation training (see https://github.com/ultralytics/ultralytics/issues/17168)
   - torchvision
   - torchaudio
 
