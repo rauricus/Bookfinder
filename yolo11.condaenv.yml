@@ -1,4 +1,4 @@
-name: yolov8
+name: yolov11
 channels:
   - conda-forge
   - pytorch
@@ -16,11 +16,13 @@ dependencies:
 
   - ultralytics
 
-  - easyocr
+# - easyocr   I'm installing this via pip, as else I get a dependancy issue with ninja.
   - pytesseract
 
   - jupyter
   - ipykernel  ## ChatGPT claims this is a prereq to use a Conda environment inside Jupyter
 
   - pip:
-    - git+https://github.com/ultralytics/thop.git ## Yolo runs without it, but might need it for some tasks
+    - git+https://github.com/ultralytics/thop.git  ## Yolo runs without it, but might need it for some tasks
+    - ninja  ## Adds ninja as a pip dependency
+    - easyocr  ## Install easyocr via pip to avoid Conda conflicts
