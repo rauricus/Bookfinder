@@ -2,3 +2,5 @@ datasets/LibVision
 datasets/Book_spine_2
 runs
 output
+
+yolo11*.pt
