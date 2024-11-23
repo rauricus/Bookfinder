@@ -39,4 +39,4 @@ python -m ipykernel install --user --name $CONDA_ENV --display-name $KERNEL_DISP
 echo
 echo "Done."
 echo
-echo "=== Make sure you select kernel 'KERNEL_DISPLAY_NAME' when executing a notebook. ==="
+echo "=== Make sure you select kernel '${KERNEL_DISPLAY_NAME}' when executing a notebook. ==="
