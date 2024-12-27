@@ -6,6 +6,9 @@
 CONDA_ENV_FILE='yolo11.condaenv.yml'
 CONDA_ENV="yolo11"
 
+MODEL_DIR="notebooks"
+MODEL_NAME="east_text_detection.pb"
+
 # === INITIALIZATION ===
 
 # Note that we currently DO NOT initialize homebrew here as fallback after conda.
@@ -49,6 +52,35 @@ fi
 # Activate conda env and check if Yolo is ok.
 micromamba activate $CONDA_ENV  
 
+echo
+echo
+
+# --- Download model used for text area detection
+
+if [ ! -f "$MODEL_DIR/$MODEL_NAME" ]; then
+	
+	echo "Downloading the EAST model for text area detection..."
+	echo
+
+	# This is coming from the OpenCV sample for text detection available here:
+	# 		https://github.com/opencv/opencv/blob/master/samples/dnn/text_detection.py
+	wget -O frozen_east_text_detection.tar.gz "https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1"
+	tar -xvf frozen_east_text_detection.tar.gz
+	rm frozen_east_text_detection.tar.gz
+
+	mkdir -p $MODEL_DIR
+	mv frozen_east_text_detection.pb $MODEL_DIR/$MODEL_NAME
+
+	echo
+	echo "Model downloaded and saved in '$MODEL_DIR'."
+else
+  echo "EAST model for text detection '$MODEL_DIR/$MODEL_NAME' already downloaded."
+fi
+
+echo
+echo
+
+# --- Check if YOLO is installed correctlyv
 echo "Running YOLO checks..."
 echo
 
