@@ -5,3 +5,4 @@ runs
 output
 
 yolo11*.pt
+notebooks/east_text_detection.pb
