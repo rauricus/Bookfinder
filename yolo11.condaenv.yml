@@ -3,16 +3,18 @@ channels:
   - conda-forge
   - pytorch
 dependencies:
-  - python=3.12  ## Yolo might only support Python 3.8-3.11
+  - python # Yolo11 used to only support 3.9-3.11
   - pip
 
-  - pytorch::pytorch=2.3 ## Needed to avoid a bug during instance segmentation training (see https://github.com/ultralytics/ultralytics/issues/17168)
+  - pytorch # ::pytorch=2.3 # 2.3 needed at one time to avoid a bug during instance segmentation training (see https://github.com/ultralytics/ultralytics/issues/17168)
   - torchvision
   - torchaudio
 
   - pandas
   - matplotlib
   - numpy<2.0.0
+  - opencv<4.10.0 # Fixes a dependancy issue with protobuf (31.12.2024)
+ # - ninja  Needed for easyocr
 
   - ultralytics
 
@@ -20,9 +22,11 @@ dependencies:
   - pytesseract
 
   - jupyter
-  - ipykernel  ## ChatGPT claims this is a prereq to use a Conda environment inside Jupyter
+  - ipykernel  ## This is a prereq for using a Conda environment inside Jupyter
+
+  - wget
 
   - pip:
     - git+https://github.com/ultralytics/thop.git  ## Yolo runs without it, but might need it for some tasks
-    - ninja  ## Adds ninja as a pip dependency
-    - easyocr  ## Install easyocr via pip to avoid Conda conflicts
+    #- ninja
+    #- easyocr  ## Install easyocr via pip to avoid Conda conflicts
