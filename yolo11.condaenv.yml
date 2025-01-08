@@ -13,7 +13,7 @@ dependencies:
   - pandas
   - matplotlib
   - numpy<2.0.0
-  - opencv<4.10.0 # Fixes a dependancy issue with protobuf (31.12.2024)
+  - opencv #<4.10.0: Resolves a dependancy issue with protobuf (as of 31.12.2024 - fixed now)
  # - ninja  Needed for easyocr
 
   - ultralytics
