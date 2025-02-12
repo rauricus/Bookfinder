@@ -24,7 +24,7 @@ micromamba activate $CONDA_ENV
 echo "Installing ipykernel for '$CONDA_ENV' ..."
 echo
 
-python -m ipykernel install --user --name $CONDA_ENV --display-name $KERNEL_DISPLAY_NAME
+python3 -m ipykernel install --user --name $CONDA_ENV --display-name $KERNEL_DISPLAY_NAME
 
 echo
 echo "Done."
