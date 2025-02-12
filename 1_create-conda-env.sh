@@ -13,22 +13,8 @@ MODEL_NAME="east_text_detection.pb"
 
 # Note that we currently DO NOT initialize homebrew here as fallback after conda.
 
-# --- Initialize micromamba
-# 	  The following code is copied from "micromamba shell init"
-
-# >>> mamba initialize >>>
-# !! Contents within this block are managed by 'micromamba shell init' !!
-export MAMBA_EXE='/opt/homebrew/bin/micromamba';
-export MAMBA_ROOT_PREFIX='/Users/andreas/micromamba';
-__mamba_setup="$("$MAMBA_EXE" shell hook --shell zsh --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__mamba_setup"
-else
-    alias micromamba="$MAMBA_EXE"  # Fallback on help from micromamba activate
-fi
-unset __mamba_setup
-# <<< mamba initialize <<<
-
+# Initialize micromamba
+eval "$(micromamba shell hook --shell zsh)"
 
 # Function to check, if a specific conda environment exists
 #    See: https://stackoverflow.com/questions/70597896/check-if-conda-env-exists-and-create-if-not-in-bash
