@@ -51,14 +51,20 @@ if [ ! -f "$MODEL_DIR/$MODEL_NAME" ]; then
 	echo "Downloading the EAST model for text area detection..."
 	echo
 
-	# This is coming from the OpenCV sample for text detection available here:
+	# This is coming from here:
+	#		https://github.com/ZER-0-NE/EAST-Detector-for-text-detection-using-OpenCV
+	# Another implementation I used earlier:
 	# 		https://github.com/opencv/opencv/blob/master/samples/dnn/text_detection.py
-	wget -O frozen_east_text_detection.tar.gz "https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1"
-	tar -xvf frozen_east_text_detection.tar.gz
-	rm frozen_east_text_detection.tar.gz
+	wget -O EAST-Detector.zip https://github.com/ZER-0-NE/EAST-Detector-for-text-detection-using-OpenCV/archive/refs/heads/master.zip
+
+	mkdir tmp
+	unzip -j -d tmp EAST-Detector.zip
 
 	mkdir -p $MODEL_DIR
-	mv frozen_east_text_detection.pb $MODEL_DIR/$MODEL_NAME
+	mv tmp/frozen_east_text_detection.pb $MODEL_DIR/$MODEL_NAME
+
+	rm -fr tmp
+	rm EAST-Detector.zip
 
 	echo
 	echo "Model downloaded and saved in '$MODEL_DIR'."
