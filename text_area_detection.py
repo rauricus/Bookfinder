@@ -108,23 +108,33 @@ for y in range(0, numRows):
         rects.append((startX, startY, endX, endY))
         confidences.append(scoresData[x])
 
-# apply non-maxima suppression to suppress weak, overlapping bounding
-# boxes.
+# apply non-maxima suppression to suppress weak, overlapping bounding boxes
 boxes = cv2.dnn.NMSBoxes(rects, confidences, score_threshold=args["min_confidence"], nms_threshold=args["overlap_threshold"])
 
-# loop over the bounding boxes
+# apply morphological operations to merge nearby bounding boxes
+kernel = np.ones((10, 10), np.uint8)
+mask = np.zeros((H, W), dtype=np.uint8)
+
+# Draw detected boxes onto a mask
 for i in boxes.flatten():
     (startX, startY, endX, endY) = rects[i]
-    # scale the bounding box coordinates based on the respective
-    # ratios
     startX = int(startX * rW)
     startY = int(startY * rH)
     endX = int(endX * rW)
     endY = int(endY * rH)
+    cv2.rectangle(mask, (startX, startY), (endX, endY), 255, -1)
 
-    # draw the bounding box on the image
-    cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 2)
+# Dilate the mask to merge nearby detections
+mask = cv2.dilate(mask, kernel, iterations=1)
+
+# Find contours from the merged mask
+contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+# Draw merged bounding boxes
+for contour in contours:
+    x, y, w, h = cv2.boundingRect(contour)
+    cv2.rectangle(orig, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
 # show the output image
-cv2.imshow("Text Detection", orig)
+cv2.imshow("Text Area Detection", orig)
 cv2.waitKey(0)
