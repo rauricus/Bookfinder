@@ -2,7 +2,6 @@
 # python3 opencv_text_detection_image.py --image images/lebron_james.jpg --east frozen_east_text_detection.pb
 
 # import the necessary packages
-from imutils.object_detection import non_max_suppression
 import numpy as np
 import argparse
 import time
@@ -16,7 +15,7 @@ ap.add_argument("-east", "--east", type=str,
                 help="path to input EAST text detector")
 ap.add_argument("-c", "--min-confidence", type=float, default=0.5,
                 help="minimum probability required to inspect a region")
-ap.add_argument("-o", "--overlap-threshold", type=float, default=0.3,
+ap.add_argument("-o", "--overlap-threshold", type=float, default=0.8,
                 help="threshold for overlapping bounding boxes")
 args = vars(ap.parse_args())
 
@@ -110,11 +109,12 @@ for y in range(0, numRows):
         confidences.append(scoresData[x])
 
 # apply non-maxima suppression to suppress weak, overlapping bounding
-# boxes
-boxes = non_max_suppression(np.array(rects), probs=confidences, overlapThresh=args["overlap_threshold"])
+# boxes.
+boxes = cv2.dnn.NMSBoxes(rects, confidences, score_threshold=args["min_confidence"], nms_threshold=args["overlap_threshold"])
 
 # loop over the bounding boxes
-for (startX, startY, endX, endY) in boxes:
+for i in boxes.flatten():
+    (startX, startY, endX, endY) = rects[i]
     # scale the bounding box coordinates based on the respective
     # ratios
     startX = int(startX * rW)
