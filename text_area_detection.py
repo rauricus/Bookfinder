@@ -26,11 +26,10 @@ orig = image.copy()
 (H, W) = image.shape[:2]
 
 # Compute the image width and height to be multiples of 32, then compute the ratio.
-(newW, newH) = (W // 32) * 32, (H // 32) * 32
-rW = W / float(newW)
-rH = H / float(newH)
+newW, newH = (W // 32) * 32, (H // 32) * 32
+rW, rH = W / float(newW), H / float(newH)
 
-# resize the image and grab the new image dimensions
+# Resize the image and grab the new image dimensions
 image = cv2.resize(image, (newW, newH))
 (H, W) = image.shape[:2]
 
@@ -66,9 +65,10 @@ confidences = []
 
 # loop over the number of rows
 for y in range(0, numRows):
-    # extract the scores (probabilities), followed by the geometrical
+
+    # Extract the scores (probabilities), followed by the geometrical
     # data used to derive potential bounding box coordinates that
-    # surround text
+    # surround text.
     scoresData = scores[0, 0, y]
     xData0 = geometry[0, 0, y]
     xData1 = geometry[0, 1, y]
