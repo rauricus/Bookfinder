@@ -31,8 +31,9 @@ def main():
     # Load a model
     #model = YOLO("yolo11s.pt", )  # load an official model
     # model = YOLO("yolo11s-seg.pt")  # load an official model (instance segmentation)
-    model = YOLO(HOME_DIR+"/runs/obb/train/weights/best.pt")  # load an official model (Oriented Bounding Boxes Object Detection)
+    #model = YOLO(HOME_DIR+"/runs/obb/train/weights/best.pt")  # load my custom model (Oriented Bounding Boxes Object Detection)
     #model = YOLO(HOME_DIR+"/runs/segment/train/weights/best.pt")  # load my custom model
+    model = YOLO(HOME_DIR+"/models/detect-book-spines.pt")
 
     # Predict with the model
     results = model.predict(source, conf=0.5)  
