@@ -1,6 +1,7 @@
 import os
 import sys
 import cv2
+import argparse
 
 # Make "libs" module path available
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'libs'))
@@ -15,6 +16,15 @@ HOME_DIR = os.getcwd()
 OUTPUT_DIR = get_next_directory(os.path.join(HOME_DIR, "output/predict"))
 
 def main():
+    parser = argparse.ArgumentParser(description="Detect and OCR book spines from an image.")
+    parser.add_argument("source", type=str, nargs='?', default=os.path.join(HOME_DIR, 'example-files/books/books_00005.png'), help="Path to the source image.")
+    args = parser.parse_args()
+
+    # source = 'https://ultralytics.com/images/bus.jpg'
+    # source = HOME_DIR+'/example-files/IMG_3688.png'
+    # source = HOME_DIR+'/example-files/books'
+    # source = HOME_DIR+'/example-files/books.mov'
+    source = args.source
 
     # --- Detect book spines in image ---
 
@@ -23,12 +33,6 @@ def main():
     # model = YOLO("yolo11s-seg.pt")  # load an official model (instance segmentation)
     model = YOLO(HOME_DIR+"/runs/obb/train/weights/best.pt")  # load an official model (Oriented Bounding Boxes Object Detection)
     #model = YOLO(HOME_DIR+"/runs/segment/train/weights/best.pt")  # load my custom model
-
-    # source = 'https://ultralytics.com/images/bus.jpg'
-    # source = HOME_DIR+'/example-files/IMG_3688.png'
-    # source = HOME_DIR+'/example-files/books'
-    # source = HOME_DIR+'/example-files/books.mov'
-    source = HOME_DIR+'/example-files/books/books_00005.png'
 
     # Predict with the model
     results = model.predict(source, conf=0.5)  
