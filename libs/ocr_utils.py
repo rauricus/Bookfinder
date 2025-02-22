@@ -3,7 +3,7 @@ from PIL import Image
 import cv2
 import numpy as np
 
-from libs.image_utils import cropImage
+from libs.image_utils import cropImage, grayscale, denoise, thresholding
 
 import pytesseract
 
@@ -45,14 +45,14 @@ def ocr_onImage(image_path, east_model):
 
         # Get cropped image using the new cropImage function
         cropped_image = cropImage(image, box)
-        cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+        processed_image = denoise(grayscale(cropped_image))
 
-        #cv2.imshow(f"Cropped image {i}", cropped_image)
-        #cv2.waitKey(0)
-        #cv2.destroyAllWindows()
+        cv2.imshow(f"Processed image {i}", processed_image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
         # Perform OCR on the corrected region
-        ocr_text = pytesseract.image_to_string(cropped_image, config="--psm 6")
+        ocr_text = pytesseract.image_to_string(processed_image, config="--psm 6")
 
         ocr_results[f"text_region_{i}"] = ocr_text.strip()
 
