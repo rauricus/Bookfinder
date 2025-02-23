@@ -63,19 +63,33 @@ def preprocess_for_text_area_detection(img):
                - rotated_180_img: 180-degree rotated version of `processed_img`.
     """
     height, width = img.shape[:2]
+
+    # A note regarding pre-processing here: I can't convert to grayscale here
+    # because the text detection model requires a 3-channel input.
+    # The grayscale conversion is done in the `preprocess_for_ocr` function.
     
     # Rotate 90 degrees if the image is taller than wide
     if height > width:
         img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
 
-    # Apply pre-processing before EAST detection
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
+    # Convert to LAB color space for contrast enhancement
+    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    
+    # Apply CLAHE to the L channel (brightness)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    img = clahe.apply(img)  # Improve contrast with CLAHE
-    img = cv2.medianBlur(img, 3)  # Light noise reduction
+    l = clahe.apply(l)
+    
+    # Merge the LAB channels back and convert to BGR
+    lab = cv2.merge((l, a, b))
+    img = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+
+    # Apply a slight median blur to reduce noise (without affecting text edges)
+    img = cv2.medianBlur(img, 3)
 
     # Create 180-degree rotated version
     rotated_180_img = cv2.rotate(img, cv2.ROTATE_180)
+
 
     return img, rotated_180_img
 
@@ -90,24 +104,28 @@ def preprocess_for_ocr(img):
     Returns:
         numpy.ndarray: The processed image ready for OCR.
     """
-    # Add unsharp masking for sharper edges
-    gaussian = cv2.GaussianBlur(img, (5, 5), 1.0)
-    img = cv2.addWeighted(img, 1.5, gaussian, -0.5, 0)
+    # Convert to grayscale FIRST (before any filtering)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Ensure the image is in grayscale
-    if len(img.shape) == 3:  # Check if it's a color image
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    
-    # Ensure the image is 8-bit unsigned integer format
-    img = np.uint8(img)
+    # Optional: Apply CLAHE if text contrast is poor
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    img = clahe.apply(img)
 
-    # Apply adaptive thresholding to create a binary image
-    img = cv2.adaptiveThreshold(
+    # Apply adaptive thresholding OR Otsu’s method
+    threshold_adaptive = cv2.adaptiveThreshold(
         img, 255, 
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
         cv2.THRESH_BINARY, 
         11, 2
     )
+
+    threshold_otsu = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+
+    # Select the better thresholding result based on average intensity
+    if np.mean(threshold_adaptive) > np.mean(threshold_otsu):
+        img = threshold_adaptive
+    else:
+        img = threshold_otsu
 
     return img
 

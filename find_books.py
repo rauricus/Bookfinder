@@ -16,6 +16,7 @@ HOME_DIR = os.getcwd()
 OUTPUT_DIR = get_next_directory(os.path.join(HOME_DIR, "output/predict"))
 
 def main():
+
     parser = argparse.ArgumentParser(description="Detect and OCR book spines from an image.")
     parser.add_argument("source", type=str, nargs='?', default=os.path.join(HOME_DIR, 'example-files/books/books_00005.png'), help="Path to the source image.")
     args = parser.parse_args()
@@ -46,64 +47,63 @@ def main():
     # Get only filename with no directories and no extension
     filename = os.path.splitext(os.path.basename(source))[0]
 
-    # Process results
+    # Load the pre-trained EAST model
+    print("[INFO] loading EAST text detector...")
+    east_model_path = os.path.join(HOME_DIR, "notebooks", "east_text_detection.pb")
+    east_model = cv2.dnn.readNet(east_model_path)
+
+
     with open(os.path.join(OUTPUT_DIR, "results.json"), "w") as text_file:
+
+        # Process results
         for result in results:
 
             if len(result) > 0:
-                result.show()
-
-                print(result.to_json(), file=text_file)
-
-                for idx, obb in enumerate(result.obb.xyxyxyxy):
-                    points = obb.cpu().numpy().reshape((-1, 1, 2)).astype(int)
-                    rect = cv2.minAreaRect(points)
-
-                    # Rotate the image slightly so that it aligns with the axes.
-                    img_cropped = extractAndRotateImage(result.orig_img, rect)
-
-                    # Ensure the image is wider than tall and also return a variant rotated by 180 degrees.
-                    img, img_rotated_180 = preprocess_for_text_area_detection(img_cropped)
-
-                    cv2.imwrite(os.path.join(OUTPUT_DIR, "book", f"{filename}_{idx}.jpg"), img)
-                    cv2.imwrite(os.path.join(OUTPUT_DIR, "book", f"{filename}_rotated-180_{idx}.jpg"), img_rotated_180)
-
-                result.save_txt(os.path.join(OUTPUT_DIR, "results.txt"), save_conf=True)
                 
-                print(result.summary())
+                print(result.to_json(), file=text_file)
+            
+                for idx, obb in enumerate(result.obb.xyxyxyxy):
 
+                    # Check if the detection is of the "book" class
+                    if result.names[idx] == 'book':
 
-                # --- Perform OCR on the book image ---
+                        print(f"Book {idx} found")
 
-                # Load the pre-trained EAST model
-                print("[INFO] loading EAST text detector...")
-                east_model_path = os.path.join(HOME_DIR, "notebooks", "east_text_detection.pb")
-                east_model = cv2.dnn.readNet(east_model_path)
+                        # --- Extract and pre-process the detected book spine images ---
 
-                for i, detection in enumerate(result.summary()):
-                    if detection['name'] == 'book':
-                        print(f"Book {i} found")
+                        # Convert the OBB to a rectangle
+                        points = obb.cpu().numpy().reshape((-1, 1, 2)).astype(int)
+                        rect = cv2.minAreaRect(points)
+
+                        # Rotate the image slightly so that it aligns with the axes.
+                        img_cropped = extractAndRotateImage(result.orig_img, rect)
+
+                        # Ensure the image is wider than tall and also return a variant rotated by 180 degrees.
+                        img, img_rotated_180 = preprocess_for_text_area_detection(img_cropped)
+
+                        cv2.imwrite(os.path.join(OUTPUT_DIR, "book", f"{filename}_{idx}.jpg"), img)
+                        cv2.imwrite(os.path.join(OUTPUT_DIR, "book", f"{filename}_rotated-180_{idx}.jpg"), img_rotated_180)
+
+                        # --- Perform OCR on the book image ---
 
                         # Perform OCR on all (both) image variants.
                         image_variants = [
-                            f"{filename}_{i}.jpg",  # Original image
-                            f"{filename}_rotated-180_{i}.jpg"  # 180-degree rotated image
+                            (img, f"{filename}_{idx}.jpg"),  # Original image
+                            (img_rotated_180, f"{filename}_rotated-180_{idx}.jpg")  # 180-degree rotated image
                         ]
 
                         # Iterate over each variant, process the OCR, and print the result
-                        for variant_filename in image_variants:
-
-                            img_path = os.path.join(OUTPUT_DIR, "book", variant_filename)
+                        for variant_img, variant_filename in image_variants:
                             
-                            detected_texts = ocr_onImage(img_path, east_model)
+                            detected_texts = ocr_onImage(variant_img, east_model)
 
                             # Display OCR results
-                            print(f"{img_path} ->")
+                            print(f"{os.path.join(OUTPUT_DIR, 'book', variant_filename)} ->")
                             for region, text in detected_texts.items():
                                 print(f"    {region}: {text}")
 
                     else:
-                        print("Skipping", detection['name'], '...')
+                        print("Skipping", result.names[idx], '...')
 
 if __name__ == "__main__":
     main()

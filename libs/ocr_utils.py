@@ -8,7 +8,7 @@ from libs.image_utils import cropImage, preprocess_for_ocr
 import pytesseract
 
 
-def ocr_onImage(image_path, east_model):
+def ocr_onImage(image, east_model):
     """
     Perform OCR on an image, forcing horizontal text detection.
 
@@ -19,14 +19,6 @@ def ocr_onImage(image_path, east_model):
     Returns:
         str: The OCR-detected text.
     """
-
-    # Open image with Pillow to access DPI metadata
-    pil_image = Image.open(image_path)
-    dpi = pil_image.info.get("dpi", (72, 72))  # Default to 72 DPI if not present
-
-    # Convert Pillow image to OpenCV format
-    image = np.array(pil_image)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     # --- Detect text regions ---
 
@@ -40,8 +32,6 @@ def ocr_onImage(image_path, east_model):
     ocr_results = {}
 
     for i, box in enumerate(boxes):
-
-        start_x, start_y, end_x, end_y = box
 
         # Get cropped image
         cropped_image = cropImage(image, box)
