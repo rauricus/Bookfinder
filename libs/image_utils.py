@@ -1,4 +1,7 @@
 import cv2
+import numpy as np
+import pytesseract
+import re
 
 
 def extractAndRotateImage(img, rect, interpolation=cv2.INTER_CUBIC):
@@ -95,8 +98,75 @@ def denoise(image):
     """
     return cv2.medianBlur(image, 5)
 
-def thresholding(image):
+def thresholding(image, thresh=0, maxval=255, type=cv2.THRESH_TOZERO + cv2.THRESH_OTSU):
     """
     Apply Otsu's thresholding to the image.
     """
-    return cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    return cv2.threshold(image, thresh, maxval, type)[1]
+
+def clahe(image, clip_limit=2.0, tile_grid_size=(8, 8)):
+    """
+    Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) to the image.
+
+    Args:
+        image (numpy.ndarray): The input grayscale image.
+        clip_limit (float): The contrast limit for CLAHE.
+        tile_grid_size (tuple): The size of the grid for CLAHE.
+
+    Returns:
+        numpy.ndarray: The image with enhanced contrast using CLAHE.
+    """
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+    return clahe.apply(image)
+
+def equalize_histogram(image):
+    """
+    Apply histogram equalization to the image to improve contrast.
+
+    Args:
+        image (numpy.ndarray): The input grayscale image.
+
+    Returns:
+        numpy.ndarray: The image with equalized histogram.
+    """
+    return cv2.equalizeHist(image)
+
+def unsharp_mask(image, kernel_size=(5, 5), sigma=1.0, amount=1.5, threshold=0):
+    """
+    Apply unsharp masking to the image to enhance edges and details.
+
+    Args:
+        image (numpy.ndarray): The input image.
+        kernel_size (tuple): The size of the Gaussian kernel.
+        sigma (float): The standard deviation of the Gaussian kernel.
+        amount (float): The amount of sharpening.
+        threshold (int): The threshold for minimum brightness change.
+
+    Returns:
+        numpy.ndarray: The sharpened image.
+    """
+    blurred = cv2.GaussianBlur(image, kernel_size, sigma)
+    sharpened = float(amount + 1) * image - float(amount) * blurred
+    sharpened = np.maximum(sharpened, np.zeros(sharpened.shape))
+    sharpened = np.minimum(sharpened, 255 * np.ones(sharpened.shape))
+    sharpened = sharpened.round().astype(np.uint8)
+    if threshold > 0:
+        low_contrast_mask = np.absolute(image - blurred) < threshold
+        np.copyto(sharpened, image, where=low_contrast_mask)
+    return sharpened
+
+def detect_text_orientation(image):
+    """
+    Detect the orientation of the text in the image.
+
+    Args:
+        image (numpy.ndarray): The input image.
+
+    Returns:
+        str: The detected text orientation in the image (0, 90, 180, 270).
+    """
+    # Use pytesseract to detect the orientation
+    osd = pytesseract.image_to_osd(image)
+    rotation = int(re.search('(?<=Rotate: )\d+', osd).group(0))
+    
+    return rotation
