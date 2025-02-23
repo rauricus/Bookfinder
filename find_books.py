@@ -65,7 +65,7 @@ def main():
                 for idx, obb in enumerate(result.obb.xyxyxyxy):
 
                     # Check if the detection is of the "book" class
-                    if result.names[idx] == 'book':
+                    if "book" in result.names.values():
 
                         print(f"Book {idx} found")
 
