@@ -51,9 +51,9 @@ def extractAndRotateImage(img, rect, interpolation=cv2.INTER_CUBIC):
 
 def prepare_for_ocr(img):
     """
-    Processes a cropped rectangle for OCR detection by ensuring the image is wider than tall
-    and generating both the original (or rotated) and a 180-degree rotated variant.
-    
+    Processes a cropped rectangle for OCR detection by ensuring 
+    the image is wider than tall and improving clarity before text area detection.
+
     Args:
         img (numpy.ndarray): The cropped rectangle image.
 
@@ -62,14 +62,19 @@ def prepare_for_ocr(img):
                - processed_img: Image oriented to be wider than tall.
                - rotated_180_img: 180-degree rotated version of `processed_img`.
     """
-    # Get image dimensions
     height, width = img.shape[:2]
-
-    # Rotate 90 degrees clockwise if the image is taller than it is wide
+    
+    # Rotate 90 degrees if the image is taller than wide
     if height > width:
         img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
 
-    # Generate the 180-degree rotated image
+    # Apply pre-processing before EAST detection
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    img = clahe.apply(img)  # Improve contrast with CLAHE
+    img = cv2.medianBlur(img, 3)  # Light noise reduction
+
+    # Create 180-degree rotated version
     rotated_180_img = cv2.rotate(img, cv2.ROTATE_180)
 
     return img, rotated_180_img

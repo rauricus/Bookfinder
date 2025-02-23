@@ -3,7 +3,7 @@ from PIL import Image
 import cv2
 import numpy as np
 
-from libs.image_utils import cropImage, grayscale, denoise, thresholding
+from libs.image_utils import cropImage, equalize_histogram, grayscale, denoise, thresholding, unsharp_mask, clahe
 
 import pytesseract
 
@@ -43,13 +43,20 @@ def ocr_onImage(image_path, east_model):
 
         start_x, start_y, end_x, end_y = box
 
+   
         # Get cropped image using the new cropImage function
         cropped_image = cropImage(image, box)
-        processed_image = denoise(grayscale(cropped_image))
+        #processed_image = denoise(grayscale(cropped_image))
+        processed_image = cropped_image
 
         cv2.imshow(f"Processed image {i}", processed_image)
-        cv2.waitKey(0)
+
+        # Wait for a key press and check if it is the ESC key
+        key = cv2.waitKey(0)
         cv2.destroyAllWindows()
+        if key == 27:  # ESC key
+            print("ESC key pressed. Aborting execution.")
+            return {}
 
         # Perform OCR on the corrected region
         ocr_text = pytesseract.image_to_string(processed_image, config="--psm 6")
@@ -217,5 +224,9 @@ def showBoundingBoxes(image, boxes):
 
     # Display the image with bounding boxes
     cv2.imshow("Bounding boxes", image)
-    cv2.waitKey(0)
+    key = cv2.waitKey(0)
     cv2.destroyAllWindows()
+    if key == 27:  # ESC key
+        print("ESC key pressed. Aborting execution.")
+        return
+    
