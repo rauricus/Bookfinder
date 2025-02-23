@@ -49,9 +49,9 @@ def extractAndRotateImage(img, rect, interpolation=cv2.INTER_CUBIC):
     return img_crop
 
 
-def prepare_for_ocr(img):
+def preprocess_for_text_area_detection(img):
     """
-    Processes a cropped rectangle for OCR detection by ensuring 
+    Processes a cropped rectangle for text aread detection by ensuring 
     the image is wider than tall and improving clarity before text area detection.
 
     Args:
@@ -80,6 +80,38 @@ def prepare_for_ocr(img):
     return img, rotated_180_img
 
 
+def preprocess_for_ocr(img):
+    """
+    Applies preprocessing to detected text areas for optimal OCR performance.
+    
+    Args:
+        img (numpy.ndarray): The cropped image of a text region.
+        
+    Returns:
+        numpy.ndarray: The processed image ready for OCR.
+    """
+    # Add unsharp masking for sharper edges
+    gaussian = cv2.GaussianBlur(img, (5, 5), 1.0)
+    img = cv2.addWeighted(img, 1.5, gaussian, -0.5, 0)
+
+    # Ensure the image is in grayscale
+    if len(img.shape) == 3:  # Check if it's a color image
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    # Ensure the image is 8-bit unsigned integer format
+    img = np.uint8(img)
+
+    # Apply adaptive thresholding to create a binary image
+    img = cv2.adaptiveThreshold(
+        img, 255, 
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+        cv2.THRESH_BINARY, 
+        11, 2
+    )
+
+    return img
+
+
 def cropImage(frame, box):
     """
     Crop the image based on the bounding box coordinates.
@@ -91,50 +123,6 @@ def cropImage(frame, box):
     start_x, start_y, end_x, end_y = box
     return frame[start_y:end_y, start_x:end_x]
 
-def grayscale(image):
-    """
-    Convert image to grayscale.
-    """
-    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-def denoise(image):
-    """
-    Apply median blur to the image to remove noise.
-    """
-    return cv2.medianBlur(image, 5)
-
-def thresholding(image, thresh=0, maxval=255, type=cv2.THRESH_TOZERO + cv2.THRESH_OTSU):
-    """
-    Apply Otsu's thresholding to the image.
-    """
-    return cv2.threshold(image, thresh, maxval, type)[1]
-
-def clahe(image, clip_limit=2.0, tile_grid_size=(8, 8)):
-    """
-    Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) to the image.
-
-    Args:
-        image (numpy.ndarray): The input grayscale image.
-        clip_limit (float): The contrast limit for CLAHE.
-        tile_grid_size (tuple): The size of the grid for CLAHE.
-
-    Returns:
-        numpy.ndarray: The image with enhanced contrast using CLAHE.
-    """
-    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
-    return clahe.apply(image)
-
-def equalize_histogram(image):
-    """
-    Apply histogram equalization to the image to improve contrast.
-
-    Args:
-        image (numpy.ndarray): The input grayscale image.
-
-    Returns:
-        numpy.ndarray: The image with equalized histogram.
-    """
-    return cv2.equalizeHist(image)
 
 def unsharp_mask(image, kernel_size=(5, 5), sigma=1.0, amount=1.5, threshold=0):
     """

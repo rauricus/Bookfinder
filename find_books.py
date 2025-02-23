@@ -7,7 +7,7 @@ import argparse
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'libs'))
 
 from libs.general_utils import get_next_directory
-from libs.image_utils import prepare_for_ocr, extractAndRotateImage
+from libs.image_utils import preprocess_for_text_area_detection, extractAndRotateImage
 from libs.ocr_utils import ocr_onImage
 
 from ultralytics import YOLO
@@ -63,7 +63,7 @@ def main():
                     img_cropped = extractAndRotateImage(result.orig_img, rect)
 
                     # Ensure the image is wider than tall and also return a variant rotated by 180 degrees.
-                    img, img_rotated_180 = prepare_for_ocr(img_cropped)
+                    img, img_rotated_180 = preprocess_for_text_area_detection(img_cropped)
 
                     cv2.imwrite(os.path.join(OUTPUT_DIR, "book", f"{filename}_{idx}.jpg"), img)
                     cv2.imwrite(os.path.join(OUTPUT_DIR, "book", f"{filename}_rotated-180_{idx}.jpg"), img_rotated_180)

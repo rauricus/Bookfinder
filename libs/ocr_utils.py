@@ -3,7 +3,7 @@ from PIL import Image
 import cv2
 import numpy as np
 
-from libs.image_utils import cropImage, equalize_histogram, grayscale, denoise, thresholding, unsharp_mask, clahe
+from libs.image_utils import cropImage, preprocess_for_ocr
 
 import pytesseract
 
@@ -43,11 +43,11 @@ def ocr_onImage(image_path, east_model):
 
         start_x, start_y, end_x, end_y = box
 
-   
-        # Get cropped image using the new cropImage function
+        # Get cropped image
         cropped_image = cropImage(image, box)
-        #processed_image = denoise(grayscale(cropped_image))
-        processed_image = cropped_image
+    
+        # Apply pre-processing to enable better OCR results
+        processed_image = preprocess_for_ocr(cropped_image)
 
         cv2.imshow(f"Processed image {i}", processed_image)
 
