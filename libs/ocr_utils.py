@@ -49,7 +49,7 @@ def ocr_onImage(image, east_model):
             return {}
 
         # Perform OCR on the corrected region
-        ocr_text = pytesseract.image_to_string(processed_image, config="--psm 6")
+        ocr_text = pytesseract.image_to_string(processed_image, config="--psm 6") 
 
         ocr_results[f"text_region_{i}"] = ocr_text.strip()
 

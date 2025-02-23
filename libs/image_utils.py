@@ -111,21 +111,21 @@ def preprocess_for_ocr(img):
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     img = clahe.apply(img)
 
-    # Apply adaptive thresholding OR Otsu’s method
-    threshold_adaptive = cv2.adaptiveThreshold(
-        img, 255, 
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-        cv2.THRESH_BINARY, 
-        11, 2
-    )
+    # # Apply adaptive thresholding OR Otsu’s method
+    # threshold_adaptive = cv2.adaptiveThreshold(
+    #     img, 255, 
+    #     cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+    #     cv2.THRESH_BINARY, 
+    #     11, 2
+    # )
 
-    threshold_otsu = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    # threshold_otsu = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
 
-    # Select the better thresholding result based on average intensity
-    if np.mean(threshold_adaptive) > np.mean(threshold_otsu):
-        img = threshold_adaptive
-    else:
-        img = threshold_otsu
+    # # Select the better thresholding result based on average intensity
+    # if np.mean(threshold_adaptive) > np.mean(threshold_otsu):
+    #     img = threshold_adaptive
+    # else:
+    #     img = threshold_otsu
 
     return img
 
