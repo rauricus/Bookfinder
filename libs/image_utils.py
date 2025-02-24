@@ -107,9 +107,8 @@ def preprocess_for_ocr(img):
     # Convert to grayscale FIRST (before any filtering)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Optional: Apply CLAHE if text contrast is poor
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    img = clahe.apply(img)
+    # Enhance edges and details
+    img = unsharp_mask(img)
 
     # # Apply adaptive thresholding OR Otsu’s method
     # threshold_adaptive = cv2.adaptiveThreshold(
