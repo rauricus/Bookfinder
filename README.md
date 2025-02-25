@@ -44,4 +44,5 @@ Only then I do the following:
 * Order bounding boxes to get text in a typical reading order.
 * Ensure OCR also knows about the language it's supposed to find. Pass it a "deu" and "eng", for example.
 * Switch out tesseract (again) with EasyOCR to improve or simplify OCR.
+* Re-train the model using one of the larger book spine training sets using e.g. RoboFlow.
 
