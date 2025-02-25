@@ -16,16 +16,22 @@ The script first detects images of book spines in a photo (or a video stream). I
 * The text in the text area images is extracted using Tesseract.
 
 ## What is not there yet
-* No cleaning of text, error correction and lookup using a books API.
+* No cleaning of text and error correction.
+* No lookup using a books API.
+* No consolidation and presentation of results.
 
 ## What doesn't work so well
 * Bounding boxes: 
-    * The morphological operations may currently be too aggressive, as multiple words or lines of words are combined in a single bounding box. While that sounds good, it actually makes OCR with tesseract harder.
+    * The morphological operations may currently be too aggressive, as multiple words or lines of words are combined in a single bounding box. While that sounds good, it actually makes OCR _with tesseract_ harder.
     * Bounding boxes are detected in an arbitrary order, mixing author and published names with the words in the title. It would be good to sort them left to right, top to bottom.
 * OCR:
     * The code currently detects text areas with a single line of text quite well. It fails with multiple lines of text, however. Using a different PSM option in tesseract seems not to improve things a lot. I can't seem to find a setting working well for single and for multiple lines, and no way to reliably detect either (so I could change options). 
     * AI suggests that EasyOCR might actually work better for me. But if I could only produce single work or at least single line, tesseract might be good enough.
-* Text area detection: EAST works ok now, but CRAFT for recognizing bounding boxes for individual characters, then combining these using morphological operations may actually work better.
+* Text area detection: 
+    * EAST works ok now, but CRAFT for recognizing bounding boxes for individual characters, then combining these using morphological operations may actually work better.
+    * Am I maybe combining too many boxes here, creating multiple line boxes, where single line ones would be better? Here's an approach (see last comment) that may work better:
+        https://stackoverflow.com/questions/20831612/getting-the-bounding-box-of-the-recognized-words-using-python-tesseract
+    Maybe it's already enough to rule out bounding boxes with confidence -1, as these are "corresponding to _boxes_ of text".
 
 ## Next steps
 * Clean text, correct errors, maybe detect words.
@@ -34,5 +40,8 @@ The script first detects images of book spines in a photo (or a video stream). I
 We can always improve text area detection and OCR later on. For now, it's more important to implement the whole pipeline to validate the approach.
 
 Only then I do the following:
-* Improve bounding boxes and detection of single words or lines.
+* Improve text area detection to focus on single words or lines.
+* Order bounding boxes to get text in a typical reading order.
+* Ensure OCR also knows about the language it's supposed to find. Pass it a "deu" and "eng", for example.
 * Switch out tesseract (again) with EasyOCR to improve or simplify OCR.
+
