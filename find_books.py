@@ -18,7 +18,8 @@ OUTPUT_DIR = get_next_directory(os.path.join(HOME_DIR, "output/predict"))
 def main():
 
     parser = argparse.ArgumentParser(description="Detect and OCR book spines from an image.")
-    parser.add_argument("source", type=str, nargs='?', default=os.path.join(HOME_DIR, 'example-files/books/books_00005.png'), help="Path to the source image.")
+    parser.add_argument("source", type=str, nargs='?', default=os.path.join(HOME_DIR, 'example-files/books/books_00005.png'), help=".")
+    parser.add_argument('--debug','-d', action='count', default=0, help="Enable debug mode. (level 1: show detections)")
     args = parser.parse_args()
 
     # source = 'https://ultralytics.com/images/bus.jpg'
@@ -95,7 +96,7 @@ def main():
                         # Iterate over each variant, process the OCR, and print the result
                         for variant_img, variant_filename in image_variants:
                             
-                            detected_texts = ocr_onImage(variant_img, east_model)
+                            detected_texts = ocr_onImage(variant_img, east_model, args.debug)
 
                             # Display OCR results
                             print(f"{os.path.join(OUTPUT_DIR, 'book', variant_filename)} ->")

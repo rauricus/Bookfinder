@@ -6,14 +6,19 @@ The script first detects images of book spines in a photo (or a video stream). I
 
 # Status
 ## What works
+### Detect book spinges
 * Book spines in a photo are recognized using a re-trained YOLO11 OBB model.
 * Book spine images are extracted by rotating them until they are higher than wide and rectangular, then cropped from the photo.
 * A 180-degree rotated image variant is created to account for texts being upside-down.
+### Detect text areas
 * The images are pre-processed to enhance text area detection.
 * Text areas are detected using an EAST detection model.
 * The bounding boxes of nearby and overlapping text areas are merged using morphological operations.
+### OCR on text areas
 * Cropped images of these text areas are extracted and further pre-processed for OCR.
 * The text in the text area images is extracted using Tesseract.
+### Text processing
+* Basic processing of texts: only characters and digits of supported languages are accepted, other special chars are removed. Texts are converted to lower case.
 
 ## What is not there yet
 * No cleaning of text and error correction.
@@ -32,6 +37,8 @@ The script first detects images of book spines in a photo (or a video stream). I
     * Am I maybe combining too many boxes here, creating multiple line boxes, where single line ones would be better? Here's an approach (see last comment) that may work better:
         https://stackoverflow.com/questions/20831612/getting-the-bounding-box-of-the-recognized-words-using-python-tesseract
     Maybe it's already enough to rule out bounding boxes with confidence -1, as these are "corresponding to _boxes_ of text".
+* Text processing:
+    * The basic text processing is inefficient: the set of accepted characters is computed several times.
 
 ## Next steps
 * Clean text, correct errors, maybe detect words.

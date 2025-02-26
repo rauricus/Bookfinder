@@ -4,11 +4,12 @@ import cv2
 import numpy as np
 
 from libs.image_utils import cropImage, preprocess_for_ocr
+from libs.text_utils import clean_ocr_text
 
 import pytesseract
 
 
-def ocr_onImage(image, east_model):
+def ocr_onImage(image, east_model, debug=0):
     """
     Perform OCR on an image, forcing horizontal text detection.
 
@@ -26,7 +27,8 @@ def ocr_onImage(image, east_model):
     boxes = detect_text_regions(image, east_model)
 
     # Visualize all bounding boxes found.
-    showBoundingBoxes(image.copy(), boxes)
+    if debug >= 1:
+        showBoundingBoxes(image.copy(), boxes)
 
     # -- Perform OCR on text areas found ---
     ocr_results = {}
@@ -39,21 +41,22 @@ def ocr_onImage(image, east_model):
         # Apply pre-processing to enable better OCR results
         processed_image = preprocess_for_ocr(cropped_image)
 
-        cv2.imshow(f"Processed image {i}", processed_image)
+        if (debug >= 1):
+            cv2.imshow(f"Processed image {i}", processed_image)
 
-        # Wait for a key press and check if it is the ESC key
-        key = cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        if key == 27:  # ESC key
-            print("ESC key pressed. Aborting execution.")
-            return {}
+            key = cv2.waitKey(0)
+            cv2.destroyAllWindows()
+            if key == 27:  # ESC key
+                print("ESC key pressed. Aborting execution.")
+                return {}
 
         # Perform OCR on the corrected region
         ocr_text = pytesseract.image_to_string(processed_image, config="--psm 6") 
 
-        ocr_results[f"text_region_{i}"] = ocr_text.strip()
+        ocr_results[f"text_region_{i}"] = clean_ocr_text(ocr_text)
 
-    cv2.destroyAllWindows()  # Ensure all windows are closed at the end
+    if (debug >= 1):
+        cv2.destroyAllWindows()  # Ensure all windows are closed at the end
 
     return ocr_results
 
