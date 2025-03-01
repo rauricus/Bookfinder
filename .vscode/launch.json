@@ -1,0 +1,29 @@
+{
+  "configurations": [
+    {
+        "name": "Debug find_books.py in Yolo11 environment",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/find_books.py",
+        "console": "integratedTerminal",
+        "justMyCode": true,
+        "python": "/Users/aweder/mamba/envs/yolo11/bin/python",
+        // oder: "python": "${config:python.pythonPath}" für den aktuell ausgewählten Interpreter.
+        "args": [
+            "${input:source}"
+        ],
+        "env": {
+          "PATH": "/Users/aweder/mamba/envs/yolo11/bin:${env:PATH}",
+          "PYTHONPATH": "/Users/aweder/mamba/envs/yolo11/bin/python"
+        }
+    }
+  ],
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "source",
+      "description": "Enter the path to the source image or video file",
+      "default": ""
+    }
+  ]
+}
