@@ -7,4 +7,5 @@ runs
 output
 
 yolo11*.pt
-notebooks/east_text_detection.pb
+models/east_text_detection.pb
+dictionaries
