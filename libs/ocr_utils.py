@@ -4,7 +4,6 @@ import cv2
 import numpy as np
 
 from libs.image_utils import cropImage, preprocess_for_ocr
-from libs.text_utils import clean_ocr_text
 
 import pytesseract
 
@@ -53,7 +52,7 @@ def ocr_onImage(image, east_model, debug=0):
         # Perform OCR on the corrected region
         ocr_text = pytesseract.image_to_string(processed_image, config="--psm 6") 
 
-        ocr_results[f"text_region_{i}"] = clean_ocr_text(ocr_text)
+        ocr_results[i] = ocr_text
 
     if (debug >= 1):
         cv2.destroyAllWindows()  # Ensure all windows are closed at the end
