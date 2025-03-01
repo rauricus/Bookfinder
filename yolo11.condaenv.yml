@@ -22,6 +22,8 @@ dependencies:
   - tesseract
   - pytesseract
 
+  - services::symspellpy
+
   - jupyter
   - ipykernel  ## This is a prereq for using a Conda environment inside Jupyter
 
