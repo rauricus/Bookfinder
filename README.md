@@ -19,9 +19,9 @@ The script first detects images of book spines in a photo (or a video stream). I
 * The text in the text area images is extracted using Tesseract.
 ### Text processing
 * Basic processing of texts: only characters and digits of supported languages are accepted, other special chars are removed. Texts are converted to lower case.
+* Auto-correction of texts: uses SymSpell to auto-correct texts found.
 
 ## What is not there yet
-* No cleaning of text and error correction.
 * No lookup using a books API.
 * No consolidation and presentation of results.
 
@@ -39,6 +39,8 @@ The script first detects images of book spines in a photo (or a video stream). I
     Maybe it's already enough to rule out bounding boxes with confidence -1, as these are "corresponding to _boxes_ of text".
 * Text processing:
     * The basic text processing is inefficient: the set of accepted characters is computed several times.
+    * The auto-correction of texts is always done with the English dictionary, which is wrong most of the time.
+    * The auto-correction of texts also falsely corrects some words, especially names.
 
 ## Next steps
 * Clean text, correct errors, maybe detect words.
