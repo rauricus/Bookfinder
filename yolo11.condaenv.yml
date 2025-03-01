@@ -19,6 +19,7 @@ dependencies:
   - ultralytics
 
 # - easyocr   I'm installing this via pip, as else I get a dependancy issue with ninja.
+  - tesseract
   - pytesseract
 
   - jupyter
