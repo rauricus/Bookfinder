@@ -1,6 +1,9 @@
 import re
 import unicodedata
 
+from symspellpy import SymSpell, Verbosity
+
+
 # Unicode-Zeichenbereiche für verschiedene Sprachen
 LANGUAGE_RANGES = {
     "de": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÄÖÜäöüß",
@@ -31,3 +34,22 @@ def clean_ocr_text(text, languages=("de", "fr")):
     text = re.sub(r"\s+", " ", text).strip().lower()
     
     return text
+
+def autocorrect_ocr_text(text, symspell_dicts, lang="en"):
+    """Korrigiert OCR-Text mittels Autokorrektur für verschiedene Sprachen."""
+
+    # Jedes Wort einzeln korrigieren
+    corrected_words = []
+
+    if lang in symspell_dicts and symspell_dicts[lang]:
+        for word in text.split():
+            suggestions = symspell_dicts[lang].lookup(word, Verbosity.CLOSEST, max_edit_distance=2)
+            if suggestions:
+                corrected_words.append(suggestions[0].term)  # Beste Korrektur nehmen
+            else:
+                corrected_words.append(word)  # Falls keine Korrektur möglich ist, das Original behalten
+
+        # Ergebnis ausgeben
+        corrected_text = " ".join(corrected_words)
+
+    return corrected_text
