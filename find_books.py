@@ -1,24 +1,35 @@
 import os
 import sys
-import cv2
 import argparse
+
+import cv2
+
+from symspellpy import SymSpell
+
+from ultralytics import YOLO
+
 
 # Make "libs" module path available
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'libs'))
 
 from libs.general_utils import get_next_directory
 from libs.image_utils import preprocess_for_text_area_detection, extractAndRotateImage
+from libs.text_utils import clean_ocr_text, autocorrect_ocr_text
 from libs.ocr_utils import ocr_onImage
 
-from ultralytics import YOLO
 
 HOME_DIR = os.getcwd()
+MODEL_DIR = os.path.join(HOME_DIR, "models")
+DICT_DIR = os.path.join(HOME_DIR, "dictionaries")
 OUTPUT_DIR = get_next_directory(os.path.join(HOME_DIR, "output/predict"))
+
 
 def main():
 
+    source_default = os.path.join(HOME_DIR, 'example-files/books/books_00005.png')
+
     parser = argparse.ArgumentParser(description="Detect and OCR book spines from an image.")
-    parser.add_argument("source", type=str, nargs='?', default=os.path.join(HOME_DIR, 'example-files/books/books_00005.png'), help=".")
+    parser.add_argument("source", type=str, nargs='?', default=source_default, help=".")
     parser.add_argument('--debug','-d', action='count', default=0, help="Enable debug mode. (level 1: show detections)")
     args = parser.parse_args()
 
@@ -26,7 +37,7 @@ def main():
     # source = HOME_DIR+'/example-files/IMG_3688.png'
     # source = HOME_DIR+'/example-files/books'
     # source = HOME_DIR+'/example-files/books.mov'
-    source = args.source
+    source = args.source if args.source else source_default
 
     # --- Detect book spines in image ---
 
@@ -35,7 +46,7 @@ def main():
     # model = YOLO("yolo11s-seg.pt")  # load an official model (instance segmentation)
     #model = YOLO(HOME_DIR+"/runs/obb/train/weights/best.pt")  # load my custom model (Oriented Bounding Boxes Object Detection)
     #model = YOLO(HOME_DIR+"/runs/segment/train/weights/best.pt")  # load my custom model
-    model = YOLO(HOME_DIR+"/models/detect-book-spines.pt")
+    model = YOLO(os.path.join(MODEL_DIR, "detect-book-spines.pt"))
 
     # Predict with the model
     results = model.predict(source, conf=0.5)  
@@ -50,8 +61,29 @@ def main():
 
     # Load the pre-trained EAST model
     print("[INFO] loading EAST text detector...")
-    east_model_path = os.path.join(HOME_DIR, "notebooks", "east_text_detection.pb")
+    east_model_path = os.path.join(MODEL_DIR, "east_text_detection.pb")
     east_model = cv2.dnn.readNet(east_model_path)
+
+
+    # Load the dictionaries for text auto-correction.
+    # Function to load dictionary
+    def load_symspell(dictionary_path, max_edit_distance=2):
+        sym_spell = SymSpell(max_dictionary_edit_distance=max_edit_distance, prefix_length=7)
+        if not sym_spell.load_dictionary(dictionary_path, term_index=0, count_index=1):
+            print(f"Failed to load dictionary: {dictionary_path}")
+            return None
+        return sym_spell
+
+    # Define paths to dictionaries
+    dict_paths = {
+        "en": os.path.join(DICT_DIR, "frequency_en.txt"),
+        "de": os.path.join(DICT_DIR, "frequency_de.txt"),
+        "fr": os.path.join(DICT_DIR, "frequency_fr.txt"),
+        "it": os.path.join(DICT_DIR, "frequency_it.txt")
+    }
+
+    # Load dictionaries
+    symspell_dicts = {lang: load_symspell(path) for lang, path in dict_paths.items()}
 
 
     with open(os.path.join(OUTPUT_DIR, "results.json"), "w") as text_file:
@@ -100,8 +132,17 @@ def main():
 
                             # Display OCR results
                             print(f"{os.path.join(OUTPUT_DIR, 'book', variant_filename)} ->")
-                            for region, text in detected_texts.items():
-                                print(f"    {region}: {text}")
+                            for region, detected_text in detected_texts.items():
+                                
+                                # Debug-Ausgabe, um den Wert von detected_text zu überprüfen
+                                print(f"Detected text in region {region}: {detected_text}")
+
+                                corrected_text = clean_ocr_text(detected_text)
+                                corrected_text = autocorrect_ocr_text(corrected_text, symspell_dicts)
+
+                                print(f"    Region {region}:")
+                                print(f"        detected text: {detected_text}")
+                                print(f"        corrected text: {corrected_text}")
 
                     else:
                         print("Skipping", result.names[idx], '...')
