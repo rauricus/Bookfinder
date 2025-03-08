@@ -124,6 +124,9 @@ def detect_text_regions(image, east_model, min_confidence=0.5, nms_threshold=0.8
         x, y, w, h = cv2.boundingRect(contour)
         boxes.append((x, y, x + w, y + h))
 
+    # Sort bounding boxes top-to-bottom, then left-to-right
+    boxes = sorted(boxes, key=lambda b: (b[1], b[0]))
+
     return boxes
 
 
