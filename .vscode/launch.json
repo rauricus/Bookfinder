@@ -1,5 +1,6 @@
 {
   "configurations": [
+
     {
         "name": "Debug find_books.py in Yolo11 environment",
         "type": "debugpy",
@@ -16,6 +17,20 @@
           "PATH": "/Users/aweder/mamba/envs/yolo11/bin:${env:PATH}",
           "PYTHONPATH": "/Users/aweder/mamba/envs/yolo11/bin/python"
         }
+    },
+    {
+      "name": "Debug fetch_book_titles.py in Yolo11 environment",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/fetch_book_titles.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "python": "/Users/andreas/micromamba/envs/yolo11/bin/python",
+      // oder: "python": "${config:python.pythonPath}" für den aktuell ausgewählten Interpreter.,
+      "env": {
+        "PATH": "/Users/andreas/micromamba/envs/yolo11/bin:${env:PATH}",
+        "PYTHONPATH": "/Users/andreas/micromamba/envs/yolo11/bin/python"
+      }
     }
   ],
   "inputs": [
