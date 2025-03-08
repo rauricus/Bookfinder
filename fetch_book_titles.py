@@ -25,7 +25,7 @@ def initialize_database():
             year TEXT,
             isbn TEXT,
             language TEXT NOT NULL,
-            UNIQUE(title, language)  -- Prevent duplicate titles in the same language
+            UNIQUE(title, language)
         )
     """)
     conn.commit()
@@ -36,19 +36,23 @@ def fetch_books_from_openlibrary(subject, languages, book_limit):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    lang_map = {'en': 'eng', 'de': 'ger', 'fr': 'fre', 'it': 'ita'}
+
     for lang in languages:
-        url = f"https://openlibrary.org/subjects/{subject}.json?limit={book_limit}&lang={lang}"
+        lang_code = lang_map.get(lang, "eng")
+        # Correct API call for strict language filtering
+        url = f"https://openlibrary.org/search.json?q=*&subject={subject}&language={lang_code}&limit={book_limit}"
         response = requests.get(url)
 
         if response.status_code == 200:
             data = response.json()
-            books = data.get("works", [])
+            books = data.get("docs", [])
 
             for book in books:
                 title = book.get("title", "").strip()
-                authors = ", ".join([author["name"] for author in book.get("authors", [])]) if "authors" in book else "Unknown"
+                authors = ", ".join(book.get("author_name", [])) if "author_name" in book else "Unknown"
                 publication_year = str(book.get("first_publish_year", "Unknown"))
-                isbn = book.get("cover_edition_key", "Unknown")
+                isbn = book.get("isbn", ["Unknown"])[0]
 
                 try:
                     cursor.execute("""
@@ -56,7 +60,9 @@ def fetch_books_from_openlibrary(subject, languages, book_limit):
                         VALUES (?, ?, ?, ?, ?)
                     """, (title, authors, publication_year, isbn, lang))
                 except sqlite3.IntegrityError:
-                    pass  # Ignore duplicate entries
+                    pass  # Duplicate entry
+        else:
+            print(f"⚠️ Failed to fetch books for subject '{subject}' in language '{lang}'.")
 
     conn.commit()
     conn.close()
@@ -77,7 +83,7 @@ def save_titles_for_symspell(output_dir, frequency):
         if not titles:
             continue
 
-        output_file = os.path.join(output_dir, f"book_titles_{lang}.txt")
+        output_file = os.path.join(output_dir, f"book_titles.{lang}.txt")
         with open(output_file, "w", encoding="utf-8") as f:
             for title in sorted(set(titles)):
                 f.write(f"{title}\t{frequency}\n")
