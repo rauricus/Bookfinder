@@ -1,11 +1,11 @@
 import os
 import argparse
 import requests
-import json
+import sqlite3
 
 HOME_DIR = os.getcwd()
 DICT_DIR = os.path.join(HOME_DIR, "dictionaries")
-METADATA_DIR = os.path.join(HOME_DIR, "metadata")
+DB_PATH = os.path.join(HOME_DIR, "books.db")
 
 # Default parameters
 DEFAULT_LANGUAGES = ["de"]
@@ -13,10 +13,28 @@ DEFAULT_SUBJECTS = ["science", "history", "fiction", "technology", "fantasy", "p
 DEFAULT_BOOK_LIMIT = 1000
 DEFAULT_FREQUENCY = 100000
 
+def initialize_database():
+    """Create the SQLite database and books table if they don't exist."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS books (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            authors TEXT,
+            year TEXT,
+            isbn TEXT,
+            language TEXT NOT NULL,
+            UNIQUE(title, language)  -- Prevent duplicate titles in the same language
+        )
+    """)
+    conn.commit()
+    conn.close()
+
 def fetch_books_from_openlibrary(subject, languages, book_limit):
-    """Fetch book titles and metadata from OpenLibrary API."""
-    books_by_language = {lang: [] for lang in languages}
-    metadata_by_language = {lang: [] for lang in languages}
+    """Fetch book titles and metadata from OpenLibrary API and store them in the database."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
 
     for lang in languages:
         url = f"https://openlibrary.org/subjects/{subject}.json?limit={book_limit}&lang={lang}"
@@ -28,79 +46,63 @@ def fetch_books_from_openlibrary(subject, languages, book_limit):
 
             for book in books:
                 title = book.get("title", "").strip()
-                author_names = [author["name"] for author in book.get("authors", [])] if "authors" in book else []
-                publication_year = book.get("first_publish_year", "Unknown")
+                authors = ", ".join([author["name"] for author in book.get("authors", [])]) if "authors" in book else "Unknown"
+                publication_year = str(book.get("first_publish_year", "Unknown"))
                 isbn = book.get("cover_edition_key", "Unknown")
 
-                # Add to title list for SymSpell
-                books_by_language[lang].append(title)
+                try:
+                    cursor.execute("""
+                        INSERT INTO books (title, authors, year, isbn, language)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (title, authors, publication_year, isbn, lang))
+                except sqlite3.IntegrityError:
+                    pass  # Ignore duplicate entries
 
-                # Store metadata
-                metadata_by_language[lang].append({
-                    "title": title,
-                    "authors": author_names,
-                    "year": publication_year,
-                    "isbn": isbn
-                })
-        else:
-            print(f"⚠️ Failed to fetch data for subject '{subject}' in language '{lang}'")
+    conn.commit()
+    conn.close()
 
-    return books_by_language, metadata_by_language
-
-def save_titles_for_symspell(books_by_language, output_dir, frequency):
-    """Save titles in SymSpell-compatible format per language."""
+def save_titles_for_symspell(output_dir, frequency):
+    """Fetch book titles from the database and save in SymSpell-compatible format per language."""
     os.makedirs(output_dir, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
 
-    for lang, titles in books_by_language.items():
+    cursor.execute("SELECT DISTINCT language FROM books")
+    languages = [row[0] for row in cursor.fetchall()]
+
+    for lang in languages:
+        cursor.execute("SELECT title FROM books WHERE language = ?", (lang,))
+        titles = [row[0] for row in cursor.fetchall()]
+
         if not titles:
             continue
 
         output_file = os.path.join(output_dir, f"book_titles_{lang}.txt")
         with open(output_file, "w", encoding="utf-8") as f:
-            for title in sorted(set(titles)):  # Remove duplicates
+            for title in sorted(set(titles)):
                 f.write(f"{title}\t{frequency}\n")
 
-        print(f"📂 Saved {len(set(titles))} book titles for '{lang}' to {output_file}")
+        print(f"📂 Saved {len(titles)} book titles for '{lang}' to {output_file}")
 
-def save_metadata(metadata_by_language, output_dir):
-    """Save metadata as JSON per language."""
-    os.makedirs(output_dir, exist_ok=True)
-
-    for lang, metadata in metadata_by_language.items():
-        if not metadata:
-            continue
-
-        json_file = os.path.join(output_dir, f"book_metadata_{lang}.json")
-
-        # Save as JSON
-        with open(json_file, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, indent=4, ensure_ascii=False)
-
-        print(f"📂 Saved metadata for '{lang}' to {json_file}")
+    conn.close()
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch book titles and metadata from OpenLibrary.")
+    parser = argparse.ArgumentParser(description="Fetch book titles and metadata from OpenLibrary and store in a database.")
     parser.add_argument("--languages", nargs="+", default=DEFAULT_LANGUAGES, help="List of languages (ISO 639-1 codes)")
     parser.add_argument("--subjects", nargs="+", default=DEFAULT_SUBJECTS, help="List of subjects to fetch")
     parser.add_argument("--limit", type=int, default=DEFAULT_BOOK_LIMIT, help="Number of books to fetch per subject")
     
     args = parser.parse_args()
 
-    all_books_by_language = {lang: [] for lang in args.languages}
-    all_metadata_by_language = {lang: [] for lang in args.languages}
+    initialize_database()
 
     for subject in args.subjects:
         print(f"📚 Fetching books for subject '{subject}' in languages: {args.languages}...")
-        books_by_language, metadata_by_language = fetch_books_from_openlibrary(subject, args.languages, args.limit)
+        fetch_books_from_openlibrary(subject, args.languages, args.limit)
 
-        for lang in args.languages:
-            all_books_by_language[lang].extend(books_by_language.get(lang, []))
-            all_metadata_by_language[lang].extend(metadata_by_language.get(lang, []))
+    save_titles_for_symspell(DICT_DIR, DEFAULT_FREQUENCY)
 
-    save_titles_for_symspell(all_books_by_language, DICT_DIR, DEFAULT_FREQUENCY)
-    save_metadata(all_metadata_by_language, METADATA_DIR)
-
-    print("✅ Finished fetching and saving book titles + metadata.")
+    print("✅ Finished fetching and storing book data.")
 
 if __name__ == "__main__":
     main()
