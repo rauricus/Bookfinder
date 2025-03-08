@@ -50,6 +50,7 @@ def fetch_books_from_openlibrary(languages, queries, max_books_per_query=1000):
 
     for lang in languages:
         lang_code = lang_map.get(lang, 'eng')
+        print(f"📚 Starting fetch for language '{lang}'...")
         for query in queries.get(lang, []):
             url = f"https://openlibrary.org/search.json?q={query}&language={lang_code}&limit={max_books_per_query}&sort=editions"
             response = requests.get(url)
@@ -76,9 +77,7 @@ def fetch_books_from_openlibrary(languages, queries, max_books_per_query=1000):
                         """, (title, authors, year, isbn, lang))
                     except sqlite3.IntegrityError:
                         continue  # Duplicate entry
-            else:
-                print(f"⚠️ Failed to fetch books for query '{query}' in language '{lang}'.")
-
+        print(f"📚 Finished fetching for language '{lang}'.")
     conn.commit()
     conn.close()
 
