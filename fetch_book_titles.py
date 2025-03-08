@@ -11,7 +11,7 @@ HOME_DIR = os.getcwd()
 DICT_DIR = os.path.join(HOME_DIR, "dictionaries")
 DB_PATH = os.path.join(HOME_DIR, "books.db")
 
-API_URL = "https://slsp-network.alma.exlibrisgroup.com/view/sru/41SLSP_NETWORK"
+API_URL = "https://swisscovery.slsp.ch/view/sru/41SLSP_NETWORK"
 ns = {'marc': 'http://www.loc.gov/MARC21/slim'}
 
 # Default parameters
@@ -37,6 +37,16 @@ def initialize_database():
     """)
     conn.commit()
     conn.close()
+
+
+def purge_database():
+    """Deletes all data from the books database."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM books")
+    conn.commit()
+    conn.close()
+    print("🗑️ Database purged successfully.")
 
 
 def fetch_books_from_swisscovery(subject, languages, book_limit):
@@ -148,10 +158,14 @@ def main():
     parser.add_argument("--languages", nargs="+", default=DEFAULT_LANGUAGES, help="List of languages (ISO 639-1 codes)")
     parser.add_argument("--subjects", nargs="+", default=DEFAULT_SUBJECTS, help="List of subjects to fetch")
     parser.add_argument("--limit", type=int, default=DEFAULT_BOOK_LIMIT, help="Number of books to fetch per subject")
+    parser.add_argument("--purge", action="store_true", help="Clear database before fetching new books")
     
     args = parser.parse_args()
 
     initialize_database()
+
+    if args.purge:
+        purge_database()
 
     for subject in args.subjects:
         print(f"📚 Fetching books for subject '{subject}' in languages: {args.languages}...")
