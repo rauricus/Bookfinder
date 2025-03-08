@@ -1,11 +1,18 @@
 import os
 import argparse
+
 import requests
 import sqlite3
+
+import xml.etree.ElementTree as ET
+
 
 HOME_DIR = os.getcwd()
 DICT_DIR = os.path.join(HOME_DIR, "dictionaries")
 DB_PATH = os.path.join(HOME_DIR, "books.db")
+
+API_URL = "https://slsp-network.alma.exlibrisgroup.com/view/sru/41SLSP_NETWORK"
+ns = {'marc': 'http://www.loc.gov/MARC21/slim'}
 
 # Default parameters
 DEFAULT_LANGUAGES = ["de"]
@@ -30,6 +37,50 @@ def initialize_database():
     """)
     conn.commit()
     conn.close()
+
+
+def fetch_books_from_swisscovery(subject, languages, book_limit):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    lang_map = {'en': 'eng', 'de': 'ger', 'fr': 'fre', 'it': 'ita'}
+
+    for lang in languages:
+        lang_code = lang_map.get(lang, "eng")
+
+        response = requests.get(API_URL, params={
+            "version": "1.2",
+            "operation": "searchRetrieve",
+            "query": f'alma.subjects="{subject}" AND alma.language="{lang_code}"',
+            "maximumRecords": book_limit
+        })
+
+        if response.status_code == 200:
+            root = ET.fromstring(response.text)
+            records = root.findall(".//{http://www.loc.gov/MARC21/slim}record")
+
+            for record in records:
+                title_elem = record.find(".//{http://www.loc.gov/MARC21/slim}datafield[@tag='245']/{http://www.loc.gov/MARC21/slim}subfield[@code='a']")
+                author_elem = record.find(".//{http://www.loc.gov/MARC21/slim}datafield[@tag='100']/{http://www.loc.gov/MARC21/slim}subfield[@code='a']")
+                pub_year_elem = record.find(".//{http://www.loc.gov/MARC21/slim}datafield[@tag='260']/{http://www.loc.gov/MARC21/slim}subfield[@code='c']")
+
+                title = title_elem.text.strip() if title_elem is not None else "Unknown"
+                authors = author_elem.text.strip() if author_elem is not None else "Unknown"
+                publication_year = pub_year_elem.text.strip() if pub_year_elem is not None else "Unknown"
+
+                try:
+                    cursor.execute("""
+                        INSERT INTO books (title, authors, year, isbn, language)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (title, authors, publication_year, "Unknown", lang))
+                except sqlite3.IntegrityError:
+                    pass  # Duplicate entry
+        else:
+            print(f"⚠️ Failed to fetch books for subject '{subject}' in language '{lang}' from swisscovery.")
+
+    conn.commit()
+    conn.close()
+
 
 def fetch_books_from_openlibrary(subject, languages, book_limit):
     """Fetch book titles and metadata from OpenLibrary API and store them in the database."""
@@ -104,7 +155,7 @@ def main():
 
     for subject in args.subjects:
         print(f"📚 Fetching books for subject '{subject}' in languages: {args.languages}...")
-        fetch_books_from_openlibrary(subject, args.languages, args.limit)
+        fetch_books_from_swisscovery(subject, args.languages, args.limit)
 
     save_titles_for_symspell(DICT_DIR, DEFAULT_FREQUENCY)
 
