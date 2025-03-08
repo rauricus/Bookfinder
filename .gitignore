@@ -8,4 +8,6 @@ output
 
 yolo11*.pt
 models/east_text_detection.pb
+
 dictionaries
+metadata
