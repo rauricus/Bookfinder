@@ -1,9 +1,14 @@
 import os
 import argparse
-import sqlite3
+
 import json
 import gzip
+
+import sqlite3
 import requests
+
+from langdetect import detect, LangDetectException
+
 
 HOME_DIR = os.getcwd()
 DICT_DIR = os.path.join(HOME_DIR, "dictionaries")
@@ -58,6 +63,9 @@ def fetch_books_from_openlibrary(languages, queries, max_books_per_query=1000):
             if response.status_code == 200:
                 data = response.json()
                 books = data.get("docs", [])
+ 
+                inserted_count = 0  # add this before your insertion loop
+
                 for book in books:
                     if 'language' in book and lang_code not in book['language']:
                         continue  # Skip if language does not match exactly
@@ -75,8 +83,14 @@ def fetch_books_from_openlibrary(languages, queries, max_books_per_query=1000):
                             INSERT INTO books (title, authors, year, isbn, language)
                             VALUES (?, ?, ?, ?, ?)
                         """, (title, authors, year, isbn, lang))
+                        inserted_count += 1
+
+                        if inserted_count % 100 == 0:
+                            print(f"📚 {inserted_count} books inserted for language '{lang}'...")
+                            
                     except sqlite3.IntegrityError:
                         continue  # Duplicate entry
+
         print(f"📚 Finished fetching for language '{lang}'.")
     conn.commit()
     conn.close()
@@ -105,6 +119,14 @@ def save_titles_for_symspell(output_dir, frequency):
         print(f"📂 Saved {len(titles)} book titles for '{lang}' to {output_file}")
 
     conn.close()
+
+def is_correct_language(title, target_lang):
+    try:
+        detected_lang = langdetect.detect(title)
+        return detected_lang == lang
+    except:
+        return False
+
 
 def main():
     parser = argparse.ArgumentParser(description="Fetch book titles using pragmatic OpenLibrary queries and store in the local database.")
