@@ -22,6 +22,8 @@ dependencies:
   - tesseract
   - pytesseract
 
+  - langdetect
+
   - services::symspellpy
 
   - jupyter
