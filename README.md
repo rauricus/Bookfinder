@@ -6,7 +6,7 @@ The script first detects images of book spines in a photo (or a video stream). I
 
 # Status
 ## What works
-### Detect book spinges
+### Detect book spines
 * Book spines in a photo are recognized using a re-trained YOLO11 OBB model.
 * Book spine images are extracted by rotating them until they are higher than wide and rectangular, then cropped from the photo.
 * A 180-degree rotated image variant is created to account for texts being upside-down.
@@ -19,10 +19,16 @@ The script first detects images of book spines in a photo (or a video stream). I
 * The text in the text area images is extracted using Tesseract.
 ### Text processing
 * Basic processing of texts: only characters and digits of supported languages are accepted, other special chars are removed. Texts are converted to lower case.
-* Auto-correction of texts: uses SymSpell to auto-correct texts found.
+### Match against common book titles
+* Added a script using a pragrmatic approach to get book titles in a specific language from OpenLibrary: we search for common short words in a language; in the resulting list, we remove those where the language of the record does not match the language we are looking for. 
+* The resulting book meta data is stored in a local DB, the book title list exported for SymSpell to use.
+* This is due to many entries being stored in English by default, but then their EDITIONS contain the actual, localized title. We can extract this in the future - it's too complex for now.
 
 ## What is not there yet
-* No lookup using a books API.
+* No preservation of order of bounding boxes, so that we try to find the book title "reading" from left to right, top to bottom.
+* No detection of names (needed?) to separate the author name from the book title.
+* No match against book titles.
+* No lookup of book details using a books API.
 * No consolidation and presentation of results.
 
 ## What doesn't work so well
@@ -54,4 +60,6 @@ Only then I do the following:
 * Ensure OCR also knows about the language it's supposed to find. Pass it a "deu" and "eng", for example.
 * Switch out tesseract (again) with EasyOCR to improve or simplify OCR.
 * Re-train the model using one of the larger book spine training sets using e.g. RoboFlow.
+
+Added a script using a pragrmatic approach to get book titles in a specific language from OpenLibrary: we search for common short words in a language; in the result list, we remove those where the language of the record does not match the language we are looking for. This is due to many entries being stored in English by default, but then their EDITIONS contain the actual, localized title. We can extract this in the future - it's too complex for now.
 
