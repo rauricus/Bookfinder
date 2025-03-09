@@ -51,9 +51,7 @@ def ocr_onImage(image, east_model, debug=0):
                 return {}
 
         # Perform OCR on the corrected region
-        ocr_text = pytesseract.image_to_string(processed_image, config="--psm 6") 
-
-        ocr_text = clean_ocr_text(ocr_text)
+        ocr_text = pytesseract.image_to_string(processed_image, config="--psm 6")
 
         ocr_results[i] = ocr_text
 
@@ -131,8 +129,6 @@ def detect_text_regions(image, east_model, min_confidence=0.5, nms_threshold=0.8
     boxes = sort_bounding_boxes(boxes, y_tolerance=10)
 
     return boxes
-
-import numpy as np
 
 def sort_bounding_boxes(boxes, y_tolerance=10):
     """
