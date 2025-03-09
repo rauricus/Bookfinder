@@ -49,7 +49,7 @@ def save_names_for_symspell(output_dir, frequency):
                 for part in author.strip().split():
                     if (
                         len(part) > 2 and
-                        not any(char in part for char in ".,()-\"") and
+                        not any(char in part for char in ".,()\"") and
                         not any(char.isdigit() for char in part)
                     ):
                         names.add(part)
