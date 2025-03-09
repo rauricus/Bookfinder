@@ -14,7 +14,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'libs'))
 
 from libs.general_utils import get_next_directory
 from libs.image_utils import preprocess_for_text_area_detection, extractAndRotateImage
-from libs.text_utils import clean_ocr_text, autocorrect_ocr_text
+from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles
 from libs.ocr_utils import ocr_onImage
 
 
@@ -22,6 +22,9 @@ HOME_DIR = os.getcwd()
 MODEL_DIR = os.path.join(HOME_DIR, "models")
 DICT_DIR = os.path.join(HOME_DIR, "dictionaries")
 OUTPUT_DIR = get_next_directory(os.path.join(HOME_DIR, "output/predict"))
+
+# Supported languages
+SUPPORTED_LANGUAGES = ["de"]
 
 
 def main():
@@ -63,28 +66,6 @@ def main():
     print("[INFO] loading EAST text detector...")
     east_model_path = os.path.join(MODEL_DIR, "east_text_detection.pb")
     east_model = cv2.dnn.readNet(east_model_path)
-
-
-    # Load the dictionaries for text auto-correction.
-    # Function to load dictionary
-    def load_symspell(dictionary_path, max_edit_distance=2):
-        sym_spell = SymSpell(max_dictionary_edit_distance=max_edit_distance, prefix_length=7)
-        if not sym_spell.load_dictionary(dictionary_path, term_index=0, count_index=1):
-            print(f"Failed to load dictionary: {dictionary_path}")
-            return None
-        return sym_spell
-
-    # Define paths to dictionaries
-    dict_paths = {
-        "en": os.path.join(DICT_DIR, "frequency_en.txt"),
-        "de": os.path.join(DICT_DIR, "frequency_de.txt"),
-        "fr": os.path.join(DICT_DIR, "frequency_fr.txt"),
-        "it": os.path.join(DICT_DIR, "frequency_it.txt")
-    }
-
-    # Load dictionaries
-    symspell_dicts = {lang: load_symspell(path) for lang, path in dict_paths.items()}
-
 
     with open(os.path.join(OUTPUT_DIR, "results.json"), "w") as text_file:
 
@@ -128,21 +109,26 @@ def main():
                         # Iterate over each variant, process the OCR, and print the result
                         for variant_img, variant_filename in image_variants:
                             
+                            print(f"{os.path.join(OUTPUT_DIR, 'book', variant_filename)} ->")
+
                             detected_texts = ocr_onImage(variant_img, east_model, args.debug)
 
-                            # Display OCR results
-                            print(f"{os.path.join(OUTPUT_DIR, 'book', variant_filename)} ->")
+                            corrected_text = ''
                             for region, detected_text in detected_texts.items():
+
+                                text = clean_ocr_text(detected_text)
+                                text = match_to_words(text)
                                 
-                                # Debug-Ausgabe, um den Wert von detected_text zu überprüfen
-                                print(f"Detected text in region {region}: {detected_text}")
+                                print(f"    {region}: '{detected_text}' -> '{text}'")
 
-                                corrected_text = clean_ocr_text(detected_text)
-                                corrected_text = autocorrect_ocr_text(corrected_text, symspell_dicts)
+                                corrected_text += text + ' '
 
-                                print(f"    Region {region}:")
-                                print(f"        detected text: {detected_text}")
-                                print(f"        corrected text: {corrected_text}")
+                            corrected_text = corrected_text.strip()
+                            print(f"    corrected title: {corrected_text}")
+
+                            matched_title = match_to_titles(corrected_text)
+                            
+                            print(f"📚 Matched title: {matched_title}") 
 
                     else:
                         print("Skipping", result.names[idx], '...')
