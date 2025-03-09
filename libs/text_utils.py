@@ -62,8 +62,6 @@ BOOKTITLE_DICTS = {lang: load_symspell(path, separator="\t") for lang, path in b
 for lang, sym_spell in BOOKTITLE_DICTS.items():
     if sym_spell:
         print(f"✅ Loaded {len(sym_spell.words)} book titles for '{lang}'")
-        print("Total book titles loaded:", len(sym_spell.words))
-        print("Sample words:", list(sym_spell.words.keys())[:20])  # Print first 20 entries
     else:
         print(f"❌ Failed to load book title dictionary for '{lang}'")
 
