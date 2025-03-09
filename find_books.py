@@ -116,10 +116,10 @@ def main():
                             corrected_text = ''
                             for region, detected_text in detected_texts.items():
 
-                                text = clean_ocr_text(detected_text)
-                                text = match_to_words(text)
+                                cleaned_text = clean_ocr_text(detected_text)
+                                text = match_to_words(cleaned_text)
                                 
-                                print(f"    {region}: '{detected_text}' -> '{text}'")
+                                print(f"    {region}: '{cleaned_text}' -> '{text}'")
 
                                 corrected_text += text + ' '
 

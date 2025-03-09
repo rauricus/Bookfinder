@@ -53,7 +53,7 @@ def ocr_onImage(image, east_model, debug=0):
         # Perform OCR on the corrected region
         ocr_text = pytesseract.image_to_string(processed_image, config="--psm 6")
 
-        ocr_results[i] = ocr_text
+        ocr_results[i] = ocr_text.strip()
 
     if (debug >= 1):
         cv2.destroyAllWindows()  # Ensure all windows are closed at the end
