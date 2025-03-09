@@ -141,7 +141,6 @@ def match_to_titles(text, lang="de"):
 
     if suggestions:
         corrected_text = suggestions[0].term
-        print(f"📖 OCR-Korrektur: '{text}' → '{corrected_text}'")
         return corrected_text
     else:
         print(f"⚠ Keine Korrektur für: '{text}' gefunden.")
