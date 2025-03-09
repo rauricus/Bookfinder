@@ -14,9 +14,10 @@ HOME_DIR = os.getcwd()
 DICT_DIR = os.path.join(HOME_DIR, "dictionaries")
 DB_PATH = os.path.join(HOME_DIR, "books.db")
 
+# Supported languages
+SUPPORTED_LANGUAGES = ["de"]
+
 # Default parameters
-DEFAULT_LANGUAGES = ["de"]
-DEFAULT_SUBJECTS = ["science", "history", "fiction", "technology", "fantasy", "philosophy"]
 DEFAULT_BOOK_LIMIT = 1000
 DEFAULT_FREQUENCY = 100000
 
@@ -54,9 +55,17 @@ def fetch_books_from_openlibrary(languages, queries, max_books_per_query=1000):
     lang_map = {'en': 'eng', 'de': 'ger', 'fr': 'fre', 'it': 'ita'}
 
     for lang in languages:
-        lang_code = lang_map.get(lang, 'eng')
+
+        lang_code = lang_map.get(lang)
+        if not lang_code:
+            print(f"❌ Language '{lang}' not supported. Skipping it.")
+            continue
+
         print(f"📚 Starting fetch for language '{lang}'...")
         for query in queries.get(lang, []):
+
+            print(f"    Query '{query}'...")
+
             url = f"https://openlibrary.org/search.json?q={query}&language={lang_code}&limit={max_books_per_query}&sort=editions"
             response = requests.get(url)
 
@@ -64,7 +73,7 @@ def fetch_books_from_openlibrary(languages, queries, max_books_per_query=1000):
                 data = response.json()
                 books = data.get("docs", [])
  
-                inserted_count = 0  # add this before your insertion loop
+                inserted_count = 0 # Count of inserted books, for showing a progress indicator
 
                 for book in books:
                     if 'language' in book and lang_code not in book['language']:
@@ -86,7 +95,7 @@ def fetch_books_from_openlibrary(languages, queries, max_books_per_query=1000):
                         inserted_count += 1
 
                         if inserted_count % 100 == 0:
-                            print(f"📚 {inserted_count} books inserted for language '{lang}'...")
+                            print(f"        📚 {inserted_count} books inserted...")
                             
                     except sqlite3.IntegrityError:
                         continue  # Duplicate entry
@@ -130,7 +139,6 @@ def is_correct_language(title, target_lang):
 
 def main():
     parser = argparse.ArgumentParser(description="Fetch book titles using pragmatic OpenLibrary queries and store in the local database.")
-    parser.add_argument("--languages", nargs="+", default=DEFAULT_LANGUAGES, help="Languages (ISO 639-1 codes)")
     parser.add_argument("--limit", type=int, default=1000, help="Max number of books per query per language")
     parser.add_argument("--purge", action="store_true", help="Clear database before fetching new books")
 
@@ -148,7 +156,7 @@ def main():
     if args.purge:
         purge_database()
 
-    fetch_books_from_openlibrary(args.languages, queries_by_language, args.limit)
+    fetch_books_from_openlibrary(SUPPORTED_LANGUAGES, queries_by_language, args.limit)
 
     save_titles_for_symspell(DICT_DIR, DEFAULT_FREQUENCY)
 
