@@ -19,10 +19,11 @@ The script first detects images of book spines in a photo (or a video stream). I
 * The text in the text area images is extracted using Tesseract.
 ### Text processing
 * Basic processing of texts: only characters and digits of supported languages are accepted, other special chars are removed. Texts are converted to lower case.
+* Detected text is then matched against a word dictionary. 
 ### Match against common book titles
-* Added a script using a pragrmatic approach to get book titles in a specific language from OpenLibrary: we search for common short words in a language; in the resulting list, we remove those where the language of the record does not match the language we are looking for. 
-* The resulting book meta data is stored in a local DB, the book title list exported for SymSpell to use.
-* This is due to many entries being stored in English by default, but then their EDITIONS contain the actual, localized title. We can extract this in the future - it's too complex for now.
+* A script uses a pragrmatic approach to get book titles in a specific language from OpenLibrary: we query common short words in a language; in the resulting list, we remove those where the language of the record does not match the language we are looking for. 
+* The meta data of books found like this is stored in a local DB. The book title list exported for SymSpell to use.
+
 
 ## What is not there yet
 * No preservation of order of bounding boxes, so that we try to find the book title "reading" from left to right, top to bottom.
@@ -45,8 +46,9 @@ The script first detects images of book spines in a photo (or a video stream). I
     Maybe it's already enough to rule out bounding boxes with confidence -1, as these are "corresponding to _boxes_ of text".
 * Text processing:
     * The basic text processing is inefficient: the set of accepted characters is computed several times.
-    * The auto-correction of texts is always done with the English dictionary, which is wrong most of the time.
+    * The auto-correction of texts is always done with the German dictionary. It really should be language sensitive.
     * The auto-correction of texts also falsely corrects some words, especially names.
+    * The book titles in the book titles dictionary could come from EDITIONS in OpenLibrary, as those titles would be localized. This is due to many entries in OL being stored in English by default, but then their EDITIONS contain the actual, localized title. We can extract this in the future - it's too complex for now.
 
 ## Next steps
 * Clean text, correct errors, maybe detect words.
