@@ -25,6 +25,7 @@ dependencies:
   - langdetect
 
   - services::symspellpy
+  - Levenshtein
 
   - jupyter
   - ipykernel  ## This is a prereq for using a Conda environment inside Jupyter

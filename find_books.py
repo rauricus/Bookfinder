@@ -14,8 +14,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'libs'))
 
 from libs.general_utils import get_next_directory
 from libs.image_utils import preprocess_for_text_area_detection, extractAndRotateImage
-from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles
+from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles, select_best_title
 from libs.ocr_utils import ocr_onImage
+
 
 
 HOME_DIR = os.getcwd()
@@ -127,8 +128,10 @@ def main():
                             print(f"    corrected title: {corrected_text}")
 
                             matched_title = match_to_titles(corrected_text)
-                            
-                            print(f"📚 Matched title: {matched_title}") 
+                            print(f"    matched title: {matched_title}") 
+
+                            best_title = select_best_title(corrected_text, matched_title)
+                            print(f"📚 Best title: {best_title}") 
 
                     else:
                         print("Skipping", result.names[idx], '...')

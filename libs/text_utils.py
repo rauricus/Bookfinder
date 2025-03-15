@@ -3,6 +3,7 @@ import os
 import unicodedata
 
 from symspellpy import SymSpell, Verbosity
+from Levenshtein import distance as levenshtein_distance
 
 
 HOME_DIR = os.getcwd()
@@ -143,3 +144,36 @@ def match_to_titles(text, lang="de"):
     else:
         print(f"⚠ Keine Korrektur für: '{text}' gefunden.")
         return text  # Keine Korrektur gefunden
+    
+
+def is_match_better(corrected, matched, lev_threshold=0.4, jaccard_threshold=0.5):
+    """
+    Compares corrected and matched titles using Levenshtein distance and Jaccard similarity.
+    Returns True if the matched title is a good replacement, otherwise False.
+    """
+    if not corrected or not matched:
+        return False  # Avoid empty matches being considered better
+
+    # Levenshtein Distance Score (normalized)
+    lev_dist = levenshtein_distance(corrected, matched)
+    max_len = max(len(corrected), len(matched))
+    lev_similarity = 1 - (lev_dist / max_len) if max_len > 0 else 0
+    
+    # Jaccard Similarity (word overlap)
+    set_corrected = set(corrected.lower().split())
+    set_matched = set(matched.lower().split())
+    intersection = len(set_corrected & set_matched)
+    union = len(set_corrected | set_matched)
+    jaccard_similarity = intersection / union if union != 0 else 0
+    
+    # The matched title is only accepted if it meets both criteria
+    return lev_similarity >= lev_threshold and jaccard_similarity >= jaccard_threshold
+
+
+def select_best_title(corrected_title, matched_title):
+    """
+    Determines the best title to use: either the corrected OCR title or the matched book title.
+    """
+    if is_match_better(corrected_title, matched_title):
+        return matched_title
+    return corrected_title
