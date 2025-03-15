@@ -72,18 +72,18 @@ def fetch_books_from_openlibrary(languages, queries, max_books_per_query=1000):
             retries = 3  # Retry up to 3 times in case of failure
             for attempt in range(retries):
                 try:
-                    response = requests.get(url, timeout=10)  # Timeout to prevent infinite waiting
+                    response = requests.get(url, timeout=30)  # Timeout to prevent infinite waiting
 
                     if response.status_code != 200:
                         print(f"    ❌ HTTP error {response.status_code} for query '{query}' (Attempt {attempt + 1}/{retries})")
-                        time.sleep(2)  # Wait before retrying
+                        time.sleep(2 ** attempt)  # Exponential backoff
                         continue  # Retry the request
 
                     try:
                         data = response.json()
                     except json.JSONDecodeError:
                         print(f"    ❌ JSON decoding error for query '{query}' (Attempt {attempt + 1}/{retries})")
-                        time.sleep(2)
+                        time.sleep(2 ** attempt)
                         continue
 
                     books = data.get("docs", [])
@@ -123,7 +123,10 @@ def fetch_books_from_openlibrary(languages, queries, max_books_per_query=1000):
 
                 except requests.RequestException as e:
                     print(f"    ❌ Request failed: {e} (Attempt {attempt + 1}/{retries})")
-                    time.sleep(2)
+                    time.sleep(2 ** attempt)
+
+            if attempt == retries - 1:
+                print(f"    ⚠️ Failed to fetch books for query '{query}' after {retries} attempts.")
 
         print(f"📚 Finished fetching for language '{lang}'.")
 
