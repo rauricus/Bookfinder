@@ -72,7 +72,7 @@ def fetch_books_from_openlibrary(languages, queries, max_books_per_query=1000):
             retries = 3  # Retry up to 3 times in case of failure
             for attempt in range(retries):
                 try:
-                    response = requests.get(url, timeout=30)  # Timeout to prevent infinite waiting
+                    response = requests.get(url, timeout=120)  # Timeout to prevent infinite waiting
 
                     if response.status_code != 200:
                         print(f"    ❌ HTTP error {response.status_code} for query '{query}' (Attempt {attempt + 1}/{retries})")
