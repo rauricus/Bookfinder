@@ -14,21 +14,23 @@ The script first detects images of book spines in a photo (or a video stream). I
 * The images are pre-processed to enhance text area detection.
 * Text areas are detected using an EAST detection model.
 * The bounding boxes of nearby and overlapping text areas are merged using morphological operations.
+* Bounding boxes are sorted from left-to-right, top-to-bottom to keep the "flow" of the text on the book spine.
 ### OCR on text areas
 * Cropped images of these text areas are extracted and further pre-processed for OCR.
 * The text in the text area images is extracted using Tesseract.
 ### Text processing
 * Basic processing of texts: only characters and digits of supported languages are accepted, other special chars are removed. Texts are converted to lower case.
-* Detected text is then matched against a word dictionary. 
+* Detected text is then auto-corrected against a word dictionary. 
+* Names of authors are preserved by detecting them against a dictionary with author names.
 ### Match against common book titles
+* The text corrected against a word dictionary is then matched with known book titles.
+* If a book title actually isn't known, this might lead to over-correction. To avoid this, the script ompares the corrected title with the title matched against the books list. If the matched title is too far off the corrected title, it gets discarded.
+### Getting book titles and the names of their authors.
 * A script uses a pragrmatic approach to get book titles in a specific language from OpenLibrary: we query common short words in a language; in the resulting list, we remove those where the language of the record does not match the language we are looking for. 
 * The meta data of books found like this is stored in a local DB. The book title list exported for SymSpell to use.
 
 
 ## What is not there yet
-* No preservation of order of bounding boxes, so that we try to find the book title "reading" from left to right, top to bottom.
-* No detection of names (needed?) to separate the author name from the book title.
-* No match against book titles.
 * No lookup of book details using a books API.
 * No consolidation and presentation of results.
 
@@ -46,19 +48,16 @@ The script first detects images of book spines in a photo (or a video stream). I
     Maybe it's already enough to rule out bounding boxes with confidence -1, as these are "corresponding to _boxes_ of text".
 * Text processing:
     * The basic text processing is inefficient: the set of accepted characters is computed several times.
-    * The auto-correction of texts is always done with the German dictionary. It really should be language sensitive.
-    * The auto-correction of texts also falsely corrects some words, especially names.
+    * The auto-correction of texts is always done with the German dictionary. It really should be language sensitive. (CHECK IF THIS IS STILL CORRECT)
     * The book titles in the book titles dictionary could come from EDITIONS in OpenLibrary, as those titles would be localized. This is due to many entries in OL being stored in English by default, but then their EDITIONS contain the actual, localized title. We can extract this in the future - it's too complex for now.
 
 ## Next steps
-* Clean text, correct errors, maybe detect words.
 * Look up books using the cleaned text.
 
 We can always improve text area detection and OCR later on. For now, it's more important to implement the whole pipeline to validate the approach.
 
 Only then I do the following:
 * Improve text area detection to focus on single words or lines.
-* Order bounding boxes to get text in a typical reading order.
 * Ensure OCR also knows about the language it's supposed to find. Pass it a "deu" and "eng", for example.
 * Switch out tesseract (again) with EasyOCR to improve or simplify OCR.
 * Re-train the model using one of the larger book spine training sets using e.g. RoboFlow.
