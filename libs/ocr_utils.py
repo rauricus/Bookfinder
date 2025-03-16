@@ -8,6 +8,11 @@ from libs.text_utils import clean_ocr_text
 
 import pytesseract
 
+import config
+
+def initialize():
+    # Add any necessary initialization code here
+    pass
 
 def ocr_onImage(image, east_model, debug=0):
     """
@@ -264,4 +269,4 @@ def showBoundingBoxes(image, boxes):
     if key == 27:  # ESC key
         print("ESC key pressed. Aborting execution.")
         return
-    
+

@@ -5,9 +5,7 @@ import unicodedata
 from symspellpy import SymSpell, Verbosity
 from Levenshtein import distance as levenshtein_distance
 
-
-HOME_DIR = os.getcwd()
-DICT_DIR = os.path.join(HOME_DIR, "dictionaries")
+import config
 
 # Unicode-Zeichenbereiche für verschiedene Sprachen
 LANGUAGE_RANGES = {
@@ -27,44 +25,47 @@ def load_symspell(dictionary_path, max_edit_distance=2, separator=" "):
     return sym_spell
 
 
-word_dict_paths = {
-    "en": os.path.join(DICT_DIR, "frequency_en.txt"),
-    "de": os.path.join(DICT_DIR, "frequency_de.txt"),
-    "fr": os.path.join(DICT_DIR, "frequency_fr.txt"),
-    "it": os.path.join(DICT_DIR, "frequency_it.txt")
-}
-WORD_DICTS = {lang: load_symspell(path) for lang, path in word_dict_paths.items()}
+def initialize():
+    global WORD_DICTS, NAME_DICTS, BOOKTITLE_DICTS
 
-for lang, sym_spell in WORD_DICTS.items():
-    if sym_spell:
-        print(f"✅ Loaded {len(sym_spell.words)} words for '{lang}'")
-    else:
-        print(f"❌ Failed to load words dictionary for '{lang}'")
+    word_dict_paths = {
+        "en": os.path.join(config.DICT_DIR, "frequency_en.txt"),
+        "de": os.path.join(config.DICT_DIR, "frequency_de.txt"),
+        "fr": os.path.join(config.DICT_DIR, "frequency_fr.txt"),
+        "it": os.path.join(config.DICT_DIR, "frequency_it.txt")
+    }
+    WORD_DICTS = {lang: load_symspell(path) for lang, path in word_dict_paths.items()}
 
-# Load author name dictionaries
-name_dict_paths = {
-    "de": os.path.join(DICT_DIR, "names.de.txt")
-}
-NAME_DICTS = {lang: load_symspell(path, separator="\t") for lang, path in name_dict_paths.items()}
+    for lang, sym_spell in WORD_DICTS.items():
+        if sym_spell:
+            print(f"✅ Loaded {len(sym_spell.words)} words for '{lang}'")
+        else:
+            print(f"❌ Failed to load words dictionary for '{lang}'")
 
-for lang, sym_spell in NAME_DICTS.items():
-    if sym_spell:
-        print(f"✅ Loaded {len(sym_spell.words)} names for '{lang}'")
-    else:
-        print(f"❌ Failed to load name dictionary for '{lang}'")
+    # Load author name dictionaries
+    name_dict_paths = {
+        "de": os.path.join(config.DICT_DIR, "names.de.txt")
+    }
+    NAME_DICTS = {lang: load_symspell(path, separator="\t") for lang, path in name_dict_paths.items()}
+
+    for lang, sym_spell in NAME_DICTS.items():
+        if sym_spell:
+            print(f"✅ Loaded {len(sym_spell.words)} names for '{lang}'")
+        else:
+            print(f"❌ Failed to load name dictionary for '{lang}'")
 
 
-# Load book title dictionaries
-booktitle_dict_paths = {
-    "de": os.path.join(DICT_DIR, "book_titles.de.txt")
-}
-BOOKTITLE_DICTS = {lang: load_symspell(path, separator="\t") for lang, path in booktitle_dict_paths.items()}
+    # Load book title dictionaries
+    booktitle_dict_paths = {
+        "de": os.path.join(config.DICT_DIR, "book_titles.de.txt")
+    }
+    BOOKTITLE_DICTS = {lang: load_symspell(path, separator="\t") for lang, path in booktitle_dict_paths.items()}
 
-for lang, sym_spell in BOOKTITLE_DICTS.items():
-    if sym_spell:
-        print(f"✅ Loaded {len(sym_spell.words)} book titles for '{lang}'")
-    else:
-        print(f"❌ Failed to load book title dictionary for '{lang}'")
+    for lang, sym_spell in BOOKTITLE_DICTS.items():
+        if sym_spell:
+            print(f"✅ Loaded {len(sym_spell.words)} book titles for '{lang}'")
+        else:
+            print(f"❌ Failed to load book title dictionary for '{lang}'")
 
 
 def get_language_charset(languages):

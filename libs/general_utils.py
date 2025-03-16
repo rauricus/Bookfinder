@@ -1,7 +1,12 @@
 import os
 
+import config
 
-def get_next_directory(base_path="output/predict"):
+def initialize():
+    # Add any necessary initialization code here
+    pass
+
+def get_next_directory(base_path=config.OUTPUT_DIR):
     """
     Get the next available directory for output.
 
@@ -20,4 +25,4 @@ def get_next_directory(base_path="output/predict"):
         while os.path.exists(f"{base_path}{i}"):
             i += 1
         return f"{base_path}{i}"
-    
+
