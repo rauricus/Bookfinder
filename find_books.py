@@ -16,6 +16,7 @@ from libs.general_utils import get_next_directory
 from libs.image_utils import preprocess_for_text_area_detection, extractAndRotateImage
 from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles, select_best_title
 from libs.ocr_utils import ocr_onImage
+from libs.lookup_utils import lookup_book_details
 
 import config
 
@@ -125,7 +126,12 @@ def main():
                             print(f"    matched title: {matched_title}") 
 
                             best_title = select_best_title(corrected_text, matched_title)
-                            print(f"📚 Best title: {best_title}") 
+                            print(f"📚 Best title: {best_title}")
+
+                            # Buchdetails abrufen
+                            book_details = lookup_book_details(best_title)
+                            if book_details:
+                                print(f"📖 Gefundene Buchdetails: {book_details}")
 
                     else:
                         print("Skipping", result.names[idx], '...')
