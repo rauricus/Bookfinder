@@ -20,9 +20,9 @@ def lookup_book_details(query_string, language="de"):
     
     base_url = "https://openlibrary.org/search.json"
     params = {
-        "q": query_string
-        #"language": language,
-        #"limit": 1  # Nur das relevanteste Ergebnis zurückgeben
+        "q": query_string,
+        "lang": language,
+        "limit": 1  # Nur das relevanteste Ergebnis zurückgeben
     }
 
     try:
