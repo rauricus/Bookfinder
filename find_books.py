@@ -21,15 +21,17 @@ from libs.lookup_utils import lookup_book_details
 import config
 
 def main():
-    # Initialize all necessary modules
-    initialize_libs()
 
+    # Set defaults
     source_default = os.path.join(config.HOME_DIR, 'example-files/books/books_00005.png')
-
-    parser = argparse.ArgumentParser(description="Detect and OCR book spines from an image.")
-    parser.add_argument("source", type=str, nargs='?', default=source_default, help=".")
+  
+    parser = argparse.ArgumentParser(description="Detect and look up books in an image (or video).")
+    parser.add_argument("source", type=str, nargs='?', default=source_default, help="Path to image, video, or directory.'")
     parser.add_argument('--debug','-d', action='count', default=0, help="Enable debug mode. (level 1: show detections)")
     args = parser.parse_args()
+
+    # Initialize all necessary modules
+    initialize_libs()
 
     # source = 'https://ultralytics.com/images/bus.jpg'
     # source = config.HOME_DIR+'/example-files/IMG_3688.png'
