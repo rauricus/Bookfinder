@@ -14,7 +14,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'libs'))
 from libs import initialize as initialize_libs
 from libs.general_utils import get_next_directory
 from libs.image_utils import preprocess_for_text_area_detection, extractAndRotateImage
-from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles, select_best_title
+from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles, select_best_title, compute_validity_score
 from libs.ocr_utils import ocr_onImage
 from libs.lookup_utils import lookup_book_details
 
@@ -110,20 +110,29 @@ def main():
                             print(f"{os.path.join(output_dir, 'book', variant_filename)} ->")
 
                             detected_texts = ocr_onImage(variant_img, east_model, args.debug)
-
-                            corrected_text = ''
+ 
+                            valid_text_regions = {}
                             for region, detected_text in detected_texts.items():
-
                                 cleaned_text = clean_ocr_text(detected_text)
-                                text = match_to_words(cleaned_text)
-                                
-                                print(f"    {region}: '{cleaned_text}' -> '{text}'")
 
-                                corrected_text += text + ' '
+                                # Step 1: Apply word correction
+                                corrected_text = match_to_words(cleaned_text)
 
-                            corrected_text = corrected_text.strip()
+                                # Step 2: Compute validity AFTER correction
+                                corrected_validity_score = compute_validity_score(corrected_text)
+
+                                print(f"    {region}: '{cleaned_text}' -> '{corrected_text}' (Bewertung: {corrected_validity_score:.2f})")
+
+                                # Only keep high-validity text
+                                if corrected_validity_score > 0.3:  # Threshold (adjust as needed)
+                                    valid_text_regions[region] = corrected_text
+                                else:
+                                    print(f"    ❌ Discarding low-confidence OCR result {cleaned_text}.")
+
+
+                            corrected_text = ' '.join(valid_text_regions.values()).strip()
                             print(f"    corrected title: {corrected_text}")
-
+  
                             matched_title = match_to_titles(corrected_text)
                             print(f"    matched title: {matched_title}") 
 
@@ -136,7 +145,7 @@ def main():
                                 print(f"📖 Gefundene Buchdetails: {book_details}")
 
                     else:
-                        print("Skipping", result.names[idx], '...')
+                        print("Skipping ", result.names[idx], '...')
 
 if __name__ == "__main__":
     main()

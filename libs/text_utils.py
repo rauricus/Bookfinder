@@ -104,6 +104,29 @@ def detect_names(word, lang="de"):
     return bool(suggestions)  # True, falls Wort ein bekannter Name ist
 
 
+def is_valid_word(word, lang="de"):
+    """Überprüft, ob ein Wort ein gültiges Wort im Wort oder Namens-Dictionary ist."""
+    if lang in WORD_DICTS and WORD_DICTS[lang]:
+        if word in WORD_DICTS[lang].words:
+            return True
+
+    if lang in NAME_DICTS and NAME_DICTS[lang]:
+        if word in NAME_DICTS[lang].words:
+            return True
+
+    return False
+
+
+def compute_validity_score(text, lang="de"):
+    """Berechnet die Prozentzahl von gültigen Wörtern in einem Text."""
+    words = text.split()
+    if not words:
+        return 0.0  # Verhindere Division durch Null
+
+    valid_words = [word for word in words if is_valid_word(word, lang)]
+    return len(valid_words) / len(words)
+
+
 def match_to_words(text, lang="de"):
     """Korrigiert OCR-Text mittels Autokorrektur für verschiedene Sprachen, 
     aber belässt erkannte Namen unverändert."""
