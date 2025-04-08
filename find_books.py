@@ -121,7 +121,9 @@ def main():
                                 # Step 2: Compute validity AFTER correction
                                 corrected_validity_score = compute_validity_score(corrected_text)
 
-                                print(f"    {region}: '{cleaned_text}' -> '{corrected_text}' (Bewertung: {corrected_validity_score:.2f})")
+                                print(f"    {region}: '{cleaned_text}' -> '{corrected_text}' (Bewertung: {corrected_validity_score:.2f} [ignored])")
+
+                                valid_text_regions[region] = corrected_text
 
                                 # Only keep high-validity text
                                 #if corrected_validity_score > 0.3:  # Threshold (adjust as needed)
