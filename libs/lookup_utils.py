@@ -1,6 +1,10 @@
 import requests
 import xml.etree.ElementTree as ET
 
+def initialize():
+    # Add any necessary initialization code here
+    pass
+
 def search_openlibrary(query_string, language="de"):
     """
     Sucht Buchdetails basierend auf dem Titel in der OpenLibrary-API.

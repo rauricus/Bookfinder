@@ -3,6 +3,9 @@ import numpy as np
 import pytesseract
 import re
 
+def initialize():
+    # Add any necessary initialization code here
+    pass
 
 def extractAndRotateImage(img, rect, interpolation=cv2.INTER_CUBIC):
     """
