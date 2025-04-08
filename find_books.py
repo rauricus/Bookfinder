@@ -124,10 +124,10 @@ def main():
                                 print(f"    {region}: '{cleaned_text}' -> '{corrected_text}' (Bewertung: {corrected_validity_score:.2f})")
 
                                 # Only keep high-validity text
-                                if corrected_validity_score > 0.3:  # Threshold (adjust as needed)
-                                    valid_text_regions[region] = corrected_text
-                                else:
-                                    print(f"    ❌ Discarding low-confidence OCR result {cleaned_text}.")
+                                #if corrected_validity_score > 0.3:  # Threshold (adjust as needed)
+                                #    valid_text_regions[region] = corrected_text
+                                #else:
+                                #    print(f"    ❌ Discarding low-confidence OCR result {cleaned_text}.")
 
 
                             corrected_text = ' '.join(valid_text_regions.values()).strip()
