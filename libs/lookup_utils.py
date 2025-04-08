@@ -1,6 +1,7 @@
 import requests
+import xml.etree.ElementTree as ET
 
-def lookup_book_details(query_string, language="de"):
+def search_openlibrary(query_string, language="de"):
     """
     Sucht Buchdetails basierend auf dem Titel in der OpenLibrary-API.
     
