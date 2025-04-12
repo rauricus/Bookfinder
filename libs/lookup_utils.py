@@ -54,44 +54,46 @@ def search_openlibrary(query_string, language="de"):
         return None
 
 
-def search_dnb(query_string):
-
-    if not query_string:  # Überprüfen, ob der Titel leer oder None ist
-        print("Kein Titel angegeben. Überspringe Lookup in DNB.")
+def search_lobid_gnd_work(query_string):
+    if not query_string:
+        print("Kein Titel angegeben. Überspringe Lookup in lobid-GND.")
         return None
 
-    print("🔎 Versuche Suche in der DNB...")
-    
+    print("🔎 Versuche Suche in lobid GND (Work)...")
+
     try:
-        dnb_url = "https://services.dnb.de/sru/dnb"
-        dnb_params = {
-            "version": "1.1",
-            "operation": "searchRetrieve",
-            "query": f'ti="{query_string}"',
-            "recordSchema": "dc",
-            "maximumRecords": 1
+        base_url = "https://lobid.org/gnd/search"
+        params = {
+            "q": query_string,
+            "filter": "type:Work",
+            "format": "json"
         }
-        dnb_response = requests.get(dnb_url, params=dnb_params, timeout=10)
-        dnb_response.raise_for_status()
-        root = ET.fromstring(dnb_response.content)
-        ns = {'dc': 'http://purl.org/dc/elements/1.1/'}
 
-        title_el = root.find('.//dc:title', ns)
-        author_el = root.find('.//dc:creator', ns)
-        year_el = root.find('.//dc:date', ns)
+        response = requests.get(base_url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
 
-        if title_el is not None:
+        if data.get("member"):
+            entry = data["member"][0]
+            wikidata_link = None
+            for entry_link in entry.get("sameAs", []):
+                link = entry_link.get("id", "")
+                if link.startswith("http://www.wikidata.org/entity/"):
+                    wikidata_link = link
+                    break
             return {
-                "title": title_el.text or "Unbekannt",
-                "authors": author_el.text if author_el is not None else "Unbekannt",
-                "year": year_el.text if year_el is not None else "Unbekannt",
-                "isbn": "Unbekannt"
+                "id": entry.get("id", "Unbekannt"),
+                "title": entry.get("preferredName", "Unbekannt"),
+                "author": entry.get("firstAuthor", [{}])[0].get("label", "Unbekannt") if entry.get("firstAuthor") else "Unbekannt",
+                "gndIdentifier": entry.get("gndIdentifier", "Unbekannt"),
+                "wikidata": wikidata_link or "Unbekannt"
             }
         else:
+            print(f"⚠️ Kein Werk gefunden für Titel: {query_string}")
             return None
 
     except Exception as e:
-        print(f"❌ Fehler bei DNB-Anfrage: {e}")
+        print(f"❌ Fehler bei lobid-GND-Anfrage: {e}")
         return None
 
 
@@ -100,8 +102,8 @@ def lookup_book_details(query_string, language="de"):
         print("Kein Titel angegeben. Überspringe Lookup.")
         return None
 
-    # Zuerst DNB versuchen
-    result = search_dnb(query_string)
+    # Zuerst lobid GND Work versuchen (verwendet DNB Daten)
+    result = search_lobid_gnd_work(query_string)
     if result:
         return result
 
