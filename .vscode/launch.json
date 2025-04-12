@@ -1,7 +1,5 @@
 {
   "configurations": [
-
-
     {
         "name": "Debug find_books.py in Yolo11 environment",
         "type": "debugpy",
@@ -27,11 +25,31 @@
       "console": "integratedTerminal",
       "justMyCode": true,
       "python": "/Users/andreas/micromamba/envs/yolo11/bin/python",
-      // oder: "python": "${config:python.pythonPath}" für den aktuell ausgewählten Interpreter.,
+      // oder: "python": "${command:python.interpreterPath}" für den aktuell ausgewählten Interpreter.
       "env": {
         "PATH": "/Users/andreas/micromamba/envs/yolo11/bin:${env:PATH}",
         "PYTHONPATH": "/Users/andreas/micromamba/envs/yolo11/bin/python"
       }
+    },
+    {
+      "name": "Python: Unit tests in ./tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "unittest",
+      "args": [
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_*.py"
+      ],
+      "justMyCode": true,
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "python": "${command:python.interpreterPath}",
+      "purpose": ["debug-test"]
     }
   ],
   "inputs": [
