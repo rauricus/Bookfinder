@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Books</title>
+</head>
+<body>
+    <h1>Find Books</h1>
+    <form action="/run" method="post">
+        <label for="source">Source (Path to image or video):</label>
+        <input type="text" id="source" name="source" required>
+        <br><br>
+        <label for="debug">Debug Level:</label>
+        <select id="debug" name="debug">
+            <option value="0" selected>No debug output</option>
+            <option value="1">Show detection details (Level 1)</option>
+        </select>
+        <br><br>
+        <button type="submit">Run</button>
+    </form>
+</body>
+</html>

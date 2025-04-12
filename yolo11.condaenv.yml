@@ -27,6 +27,8 @@ dependencies:
   - services::symspellpy
   - Levenshtein
 
+  - flask
+
   - jupyter
   - ipykernel  ## This is a prereq for using a Conda environment inside Jupyter
 
