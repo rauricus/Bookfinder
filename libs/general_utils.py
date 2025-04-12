@@ -26,3 +26,32 @@ def get_next_directory(base_path=config.OUTPUT_DIR):
             i += 1
         return f"{base_path}{i}"
 
+def iso639_1_to_3(language_code):
+    """
+    Converts ISO 639-1 (2-letter) codes to ISO 639-2 (3-letter) codes.
+
+    Args:
+        language_code (str): The ISO 639-1 code (e.g., "de", "en").
+
+    Returns:
+        str: The ISO 639-2 code (e.g., "ger", "eng"). Defaults to "ger" if unknown.
+    """
+    mapping = {
+        "de": "ger",
+        "en": "eng",
+        "fr": "fre",
+        "es": "spa",
+        "it": "ita",
+        "nl": "dut",
+        "sv": "swe",
+        "no": "nor",
+        "da": "dan",
+        "fi": "fin",
+        "pl": "pol",
+        "cs": "cze",
+        "ru": "rus",
+        "zh": "chi",
+        "ja": "jpn",
+        "ko": "kor"
+    }
+    return mapping.get(language_code.lower(), "ger")
