@@ -1,3 +1,4 @@
+from libs.general_utils import iso639_1_to_3
 import requests
 import xml.etree.ElementTree as ET
 
@@ -5,6 +6,53 @@ def initialize():
     # Add any necessary initialization code here
     pass
 
+    
+def search_dnb(query_string, language="de"):
+    if not query_string:
+        print("Kein Titel angegeben. Überspringe Lookup in DNB.")
+        return None
+
+    print("🔎 Suche in der DNB (SRU)...")
+
+    try:
+        dnb_url = "https://services.dnb.de/sru/dnb"
+        dnb_params = {
+            "version": "1.1",
+            "operation": "searchRetrieve",
+            "query": f'{query_string} and spr="{iso639_1_to_3(language)}"',
+            "maximumRecords": 1
+        }
+        dnb_response = requests.get(dnb_url, params=dnb_params, timeout=10)
+        dnb_response.raise_for_status()
+        root = ET.fromstring(dnb_response.content)
+        ns = {
+            'dc': 'http://purl.org/dc/elements/1.1/',
+            'dcterms': 'http://purl.org/dc/terms/',
+            'gndo': 'https://d-nb.info/standards/elementset/gnd#',
+            'bibo': 'http://purl.org/ontology/bibo/'
+        }
+
+        title_el = root.find('.//dc:title', ns)
+        author_el = root.find('.//dcterms:creator//gndo:preferredName', ns)
+        year_el = root.find('.//dcterms:issued', ns)
+        isbn_el = root.find('.//bibo:isbn13', ns)
+
+        if all(el is None for el in [title_el, author_el, year_el, isbn_el]):
+            print(f"⚠️ Kein Buch gefunden für Query: {query_string}")
+            return None
+
+        return {
+            "title": title_el.text if title_el is not None else "Unbekannt",
+            "authors": author_el.text if author_el is not None else "Unbekannt",
+            "year": year_el.text if year_el is not None else "Unbekannt",
+            "isbn": isbn_el.text if isbn_el is not None else "Unbekannt"
+        }
+
+    except Exception as e:
+        print(f"❌ Fehler bei DNB-Anfrage: {e}")
+        return None
+    
+    
 def search_openlibrary(query_string, language="de"):
     """
     Sucht Buchdetails basierend auf dem Titel in der OpenLibrary-API.
@@ -46,7 +94,7 @@ def search_openlibrary(query_string, language="de"):
                 "isbn": book.get("isbn", ["Unbekannt"])[0] if "isbn" in book else "Unbekannt"
             }
         else:
-            print(f"⚠️ Kein Buch gefunden für Titel: {query_string}")
+            print(f"⚠️ Kein Buch gefunden für Query: {query_string}")
             return None
 
     except requests.RequestException as e:
@@ -59,7 +107,7 @@ def search_lobid_gnd_work(query_string):
         print("Kein Titel angegeben. Überspringe Lookup in lobid-GND.")
         return None
 
-    print("🔎 Versuche Suche in lobid GND (Work)...")
+    print("🔎 Suche in lobid GND (Work)...")
 
     try:
         base_url = "https://lobid.org/gnd/search"
@@ -89,7 +137,7 @@ def search_lobid_gnd_work(query_string):
                 "wikidata": wikidata_link or "Unbekannt"
             }
         else:
-            print(f"⚠️ Kein Werk gefunden für Titel: {query_string}")
+            print(f"⚠️ Kein Buch gefunden für Query: {query_string}")
             return None
 
     except Exception as e:
@@ -102,11 +150,17 @@ def lookup_book_details(query_string, language="de"):
         print("Kein Titel angegeben. Überspringe Lookup.")
         return None
 
-    # Zuerst lobid GND Work versuchen (verwendet DNB Daten)
-    result = search_lobid_gnd_work(query_string)
+    # Zuerst DNB SRU versuchen
+    result = search_dnb(query_string)
     if result:
         return result
 
     # Fallback: OpenLibrary
     print("🔄 Fallback: Versuche Suche in OpenLibrary...")
-    return search_openlibrary(query_string, language)
+    result = search_openlibrary(query_string, language)
+    if result:
+        return result
+
+    # Optional: lobid GND ergänzend (Normdaten)
+    print("🔄 Zusatzversuch mit lobid GND (Normdaten)...")
+    return search_lobid_gnd_work(query_string)
