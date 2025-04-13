@@ -11,3 +11,4 @@ models/east_text_detection.pb
 
 dictionaries
 books.db
+app.log
