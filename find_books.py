@@ -3,10 +3,10 @@ import sys
 import argparse
 import logging
 
+import config  # Do this here to ensure logging is configured early
+
 import cv2
-
 from symspellpy import SymSpell
-
 from ultralytics import YOLO
 
 # Make "libs" module path available
@@ -19,7 +19,7 @@ from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles, sel
 from libs.ocr_utils import ocr_onImage
 from libs.lookup_utils import lookup_book_details
 
-import config
+
 
 def main():
 
@@ -33,6 +33,7 @@ def main():
 
     # Initialize all necessary modules
     initialize_libs()
+
 
     # source = 'https://ultralytics.com/images/bus.jpg'
     # source = config.HOME_DIR+'/example-files/IMG_3688.png'
