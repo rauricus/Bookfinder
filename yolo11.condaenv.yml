@@ -28,6 +28,8 @@ dependencies:
   - Levenshtein
 
   - flask
+  - flask-socketio
+  - eventlet
 
   - jupyter
   - ipykernel  ## This is a prereq for using a Conda environment inside Jupyter

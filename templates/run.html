@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f4f4f4;
+            padding: 10px;
+            margin: 0;
+            height: 100vh;
+            overflow-y: scroll;
+        }
+    </style>
+</head>
+<body>
+    <h1>Log Output</h1>
+    <pre id="log-container">Loading logs...</pre>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const logContainer = document.getElementById('log-container');
+
+        socket.on('log_message', (data) => {
+            logContainer.textContent += data.data + '\n';
+            logContainer.scrollTop = logContainer.scrollHeight; // Auto-scroll to the bottom
+        });
+    </script>
+</body>
+</html>

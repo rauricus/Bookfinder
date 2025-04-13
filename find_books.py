@@ -21,37 +21,48 @@ from libs.lookup_utils import lookup_book_details
 
 
 
-def main():
+def main(source=None, debug=0, log_handler=None):
+    """
+    Main function to detect and look up books in an image or video.
 
-    # Set defaults
+    Args:
+        source (str): Path to the image, video, or directory.
+        debug (int): Debug level (0 for no debug, 1 for basic debug).
+        log_handler (logging.Handler): Optional logging handler to add to the logger.
+    """
+    # Add the provided log handler, if any
+    if log_handler:
+        logging.getLogger().addHandler(log_handler)
+        # Test if the log handler is active
+        logging.info("A handler has been added to the logger.")
+
+    # Set defaults if not provided
+    # source_default = 'https://ultralytics.com/images/bus.jpg'
+    # source_default = config.HOME_DIR+'/example-files/IMG_3688.png'
+    # source_default = config.HOME_DIR+'/example-files/books'
+    # source_default = config.HOME_DIR+'/example-files/books.mov'
     source_default = os.path.join(config.HOME_DIR, 'example-files/books/books_00005.png')
-  
-    parser = argparse.ArgumentParser(description="Detect and look up books in an image (or video).")
-    parser.add_argument("source", type=str, nargs='?', default=source_default, help="Path to image, video, or directory.'")
-    parser.add_argument('--debug','-d', action='count', default=0, help="Enable debug mode. (level 1: show detections)")
-    args = parser.parse_args()
+    source = source or source_default
 
     # Initialize all necessary modules
     initialize_libs()
 
+    # Set debug level for logging
+    if debug >= 1:
+        logging.getLogger().setLevel(logging.DEBUG)
 
-    # source = 'https://ultralytics.com/images/bus.jpg'
-    # source = config.HOME_DIR+'/example-files/IMG_3688.png'
-    # source = config.HOME_DIR+'/example-files/books'
-    # source = config.HOME_DIR+'/example-files/books.mov'
-    source = args.source if args.source else source_default
-
-    # --- Detect book spines in image ---
+    
+    # --- Detectbook spines in image ---
 
     # Load a model
-    #model = YOLO("yolo11s.pt", )  # load an official model
+    # model = YOLO("yolo11s.pt", )  # load an official model
     # model = YOLO("yolo11s-seg.pt")  # load an official model (instance segmentation)
-    #model = YOLO(config.HOME_DIR+"/runs/obb/train/weights/best.pt")  # load my custom model (Oriented Bounding Boxes Object Detection)
-    #model = YOLO(config.HOME_DIR+"/runs/segment/train/weights/best.pt")  # load my custom model
+    # model = YOLO(config.HOME_DIR+"/runs/obb/train/weights/best.pt")  # load my custom model (Oriented Bounding Boxes Object Detection)
+    # model = YOLO(config.HOME_DIR+"/runs/segment/train/weights/best.pt")  # load my custom model
     model = YOLO(os.path.join(config.MODEL_DIR, "detect-book-spines.pt"))
 
     # Predict with the model
-    results = model.predict(source, conf=0.5)  
+    results = model.predict(source, conf=0.5)
 
     # --- Process and store book spine images ---
 
@@ -73,9 +84,9 @@ def main():
         for result in results:
 
             if len(result) > 0:
-                
+
                 logging.debug(result.to_json(), file=text_file)
-            
+
                 for idx, obb in enumerate(result.obb.xyxyxyxy):
 
                     # Check if the detection is of the "book" class
@@ -108,11 +119,11 @@ def main():
 
                         # Iterate over each variant, process the OCR, and print the result
                         for variant_img, variant_filename in image_variants:
-                            
+
                             logging.info(f"{os.path.join(output_dir, 'book', variant_filename)} ->")
 
-                            detected_texts = ocr_onImage(variant_img, east_model, args.debug)
- 
+                            detected_texts = ocr_onImage(variant_img, east_model, debug)
+
                             valid_text_regions = {}
                             for region, detected_text in detected_texts.items():
                                 cleaned_text = clean_ocr_text(detected_text)
@@ -136,9 +147,9 @@ def main():
 
                             corrected_text = ' '.join(valid_text_regions.values()).strip()
                             logging.debug(f"    corrected title: {corrected_text}")
-  
+
                             matched_title = match_to_titles(corrected_text)
-                            logging.debug(f"    matched title: {matched_title}") 
+                            logging.debug(f"    matched title: {matched_title}")
 
                             best_title = select_best_title(corrected_text, matched_title)
                             logging.info(f"📚 Best title: {best_title}")
@@ -152,4 +163,10 @@ def main():
                         logging.info("Skipping ", result.names[idx], '...')
 
 if __name__ == "__main__":
-    main()
+    
+    parser = argparse.ArgumentParser(description="Detect and look up books in an image (or video).")
+    parser.add_argument("source", type=str, nargs='?', help="Path to image, video, or directory.'")
+    parser.add_argument('--debug','-d', action='count', default=0, help="Enable debug mode. (level 1: show detections)")
+    args = parser.parse_args()
+    
+    main(args.source, args.debug)
