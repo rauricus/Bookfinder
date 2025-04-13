@@ -2,6 +2,7 @@ from PIL import Image
 
 import cv2
 import numpy as np
+import logging
 
 from libs.image_utils import cropImage, preprocess_for_ocr
 from libs.text_utils import clean_ocr_text
@@ -52,7 +53,7 @@ def ocr_onImage(image, east_model, debug=0):
             key = cv2.waitKey(0)
             cv2.destroyAllWindows()
             if key == 27:  # ESC key
-                print("ESC key pressed. Aborting execution.")
+                logging.warning("ESC key pressed. Aborting execution.")
                 return {}
 
         # Perform OCR on the corrected region
@@ -247,7 +248,7 @@ def showBoundingBoxes(image, boxes):
 
     # Check if vertices are empty
     if boxes is None or len(boxes) == 0:
-        print("No bounding boxes to display.")
+        logging.debug("No bounding boxes to display.")
         return
     
     # Show bounding boxes
@@ -267,6 +268,6 @@ def showBoundingBoxes(image, boxes):
     key = cv2.waitKey(0)
     cv2.destroyAllWindows()
     if key == 27:  # ESC key
-        print("ESC key pressed. Aborting execution.")
+        logging.warning("ESC key pressed. Aborting execution.")
         return
 

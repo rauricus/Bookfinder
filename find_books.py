@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import logging
 
 import cv2
 
@@ -61,7 +62,7 @@ def main():
     filename = os.path.splitext(os.path.basename(source))[0]
 
     # Load the pre-trained EAST model
-    print("[INFO] loading EAST text detector...")
+    logging.debug("Loading EAST text detector...")
     east_model_path = os.path.join(config.MODEL_DIR, "east_text_detection.pb")
     east_model = cv2.dnn.readNet(east_model_path)
 
@@ -72,14 +73,14 @@ def main():
 
             if len(result) > 0:
                 
-                print(result.to_json(), file=text_file)
+                logging.debug(result.to_json(), file=text_file)
             
                 for idx, obb in enumerate(result.obb.xyxyxyxy):
 
                     # Check if the detection is of the "book" class
                     if "book" in result.names.values():
 
-                        print(f"Book {idx} found")
+                        logging.info(f"Book {idx} found")
 
                         # --- Extract and pre-process the detected book spine images ---
 
@@ -107,7 +108,7 @@ def main():
                         # Iterate over each variant, process the OCR, and print the result
                         for variant_img, variant_filename in image_variants:
                             
-                            print(f"{os.path.join(output_dir, 'book', variant_filename)} ->")
+                            logging.info(f"{os.path.join(output_dir, 'book', variant_filename)} ->")
 
                             detected_texts = ocr_onImage(variant_img, east_model, args.debug)
  
@@ -121,7 +122,7 @@ def main():
                                 # Step 2: Compute validity AFTER correction
                                 corrected_validity_score = compute_validity_score(corrected_text)
 
-                                print(f"    {region}: '{cleaned_text}' -> '{corrected_text}' (Bewertung: {corrected_validity_score:.2f} [ignored])")
+                                logging.debug(f"    {region}: '{cleaned_text}' -> '{corrected_text}' (Bewertung: {corrected_validity_score:.2f} [ignored])")
 
                                 valid_text_regions[region] = corrected_text
 
@@ -129,25 +130,25 @@ def main():
                                 #if corrected_validity_score > 0.3:  # Threshold (adjust as needed)
                                 #    valid_text_regions[region] = corrected_text
                                 #else:
-                                #    print(f"    ❌ Discarding low-confidence OCR result {cleaned_text}.")
+                                #    logging.info(f"    ❌ Discarding low-confidence OCR result {cleaned_text}.")
 
 
                             corrected_text = ' '.join(valid_text_regions.values()).strip()
-                            print(f"    corrected title: {corrected_text}")
+                            logging.debug(f"    corrected title: {corrected_text}")
   
                             matched_title = match_to_titles(corrected_text)
-                            print(f"    matched title: {matched_title}") 
+                            logging.debug(f"    matched title: {matched_title}") 
 
                             best_title = select_best_title(corrected_text, matched_title)
-                            print(f"📚 Best title: {best_title}")
+                            logging.info(f"📚 Best title: {best_title}")
 
                             # Buchdetails abrufen
                             book_details = lookup_book_details(best_title)
                             if book_details:
-                                print(f"📖 Gefundene Buchdetails: {book_details}")
+                                logging.info(f"📖 Gefundene Buchdetails: {book_details}")
 
                     else:
-                        print("Skipping ", result.names[idx], '...')
+                        logging.info("Skipping ", result.names[idx], '...')
 
 if __name__ == "__main__":
     main()
