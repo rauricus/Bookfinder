@@ -17,71 +17,59 @@ from flask import Flask, request, render_template, jsonify
 from flask_socketio import SocketIO, emit
 
 from find_books import main as find_books_main
+from libs.socketio_log_handler import SocketIOLogHandler
 
 
-# Add a log buffer to store early log messages.
-#   This is necessary because the SocketIO connection may not be established when the log messages are generated.
-#   The log messages will be sent to the WebSocket once a connection is established.
-log_buffer = []
-log_buffer.append('\n')
+class FlaskApp:
+    def __init__(self):
+        """Initialize the Flask application and its components."""
+        self.app = Flask(__name__)
+        self.socketio = SocketIO(self.app, async_mode='eventlet')
+        self.socketio_handler = SocketIOLogHandler(self.socketio)
+        self.socketio_handler.setLevel(logging.INFO)
+        self.socketio_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 
-class BufferedSocketIOHandler(logging.Handler):
-    def __init__(self, socketio):
-        super().__init__()
-        self.socketio = socketio
+        # Register routes
+        self._register_routes()
 
-    def emit(self, record):
-        log_message = self.format(record)
-        if self.socketio.server.eio.sockets:
-            self.socketio.emit('log_message', {'data': log_message})
-        else:
-            log_buffer.append(log_message)  # Buffer the log message if no WebSocket connection exists
+    def _register_routes(self):
+        """Register all Flask routes."""
+        
+        @self.app.route('/')
+        def index():
+            return render_template('index.html')
 
-app = Flask(__name__)
 
-socketio = SocketIO(app, async_mode='eventlet') # Use eventlet for real-time streaming of logs
+        @self.app.route('/run', methods=['POST'])
+        def run_find_books():
+            source = request.form.get('source')
+            debug = int(request.form.get('debug', 0))
 
-# Flush the log buffer when a WebSocket connection is established
-@socketio.on('connect')
-def flush_log_buffer():
-    for message in log_buffer:
-        socketio.emit('log_message', {'data': message})
-    log_buffer.clear()
+            if not source or not os.path.exists(source):
+                return jsonify({"error": "Invalid or missing source file."}), 400
 
-# Add the custom SocketIOHandler to the root logger
-# TODO: I believe setting the level and formatter here is not necessary, as the logger should already be configured
-# in config.py. However, this is not the case: the level and format from basicConfig are not inherited by the
-# SocketIOHandler. So we set them here. We should maybe call basicConfig later, after all handlers have been added.
-socketio_handler = BufferedSocketIOHandler(socketio)
-socketio_handler.setLevel(logging.INFO)
-socketio_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+            try:
+                # Pass the SocketIOHandler to the main function
+                thread = threading.Thread(target=find_books_main, args=(source, debug, self.socketio_handler), daemon=True)
+                thread.start()
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+                return render_template('run.html')
 
-@app.route('/run', methods=['POST'])
-def run_find_books():
-    source = request.form.get('source')
-    debug = int(request.form.get('debug', 0))
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
 
-    if not source or not os.path.exists(source):
-        return jsonify({"error": "Invalid or missing source file."}), 400
 
-    try:
-        # Pass the SocketIOHandler to the main function
-        thread = threading.Thread(target=find_books_main, args=(source, debug, socketio_handler), daemon=True)
-        thread.start()
+        @self.app.route('/test_socket')
+        def test_socket():
+            self.socketio.emit('log_message', {'data': 'Test message from server'})
+            return "Test message sent to WebSocket. Check the browser console.", 200
 
-        return render_template('run.html')
+    def run(self, host='0.0.0.0', port=5010, debug=True):
+        """Run the Flask application."""
+        self.socketio.run(self.app, host=host, port=port, debug=debug)
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
-@app.route('/test_socket')
-def test_socket():
-    socketio.emit('log_message', {'data': 'Test message from server'})
-    return "Test message sent to WebSocket. Check the browser console.", 200
-
+# Create an instance of the FlaskApp class and run the application
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5010, debug=True)
+    flask_app = FlaskApp()
+    flask_app.run()
