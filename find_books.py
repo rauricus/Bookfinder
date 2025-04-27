@@ -35,8 +35,8 @@ def initialize_run_database():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS runs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            start_time TEXT NOT NULL,
-            end_time TEXT,
+            start_time DATETIME NOT NULL,
+            end_time DATETIME,
             books_detected INTEGER DEFAULT 0
         )
     """)
