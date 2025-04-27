@@ -72,10 +72,7 @@ def initialize_detections_table():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS detections (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            detection_id TEXT NOT NULL,
             run_id INTEGER NOT NULL,
-            image_path TEXT NOT NULL,
-            best_title TEXT,
             created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (run_id) REFERENCES runs (id)
@@ -84,20 +81,52 @@ def initialize_detections_table():
     conn.commit()
     conn.close()
 
-def log_detection_entry(detection_id, run_id, image_path, best_title):
-    """Log a detected item into the detections table."""
+def log_detection_entry(run_id):
+    """Log a detected item into the detections table and return its ID."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO detections (detection_id, run_id, image_path, best_title)
-        VALUES (?, ?, ?, ?)
-    """, (detection_id, run_id, image_path, best_title))
+        INSERT INTO detections (run_id)
+        VALUES (?)
+    """, (run_id,))
+    detection_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return detection_id
+
+def initialize_detection_variants_table():
+    """Create the detection_variants table in the database if it doesn't exist."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS detection_variants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            detection_id INTEGER NOT NULL,
+            image_path TEXT NOT NULL,
+            best_title TEXT,
+            created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (detection_id) REFERENCES detections (id)
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def log_detection_variant(detection_id, image_path, best_title):
+    """Log a variant of a detection into the detection_variants table."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO detection_variants (detection_id, image_path, best_title)
+        VALUES (?, ?, ?)
+    """, (detection_id, image_path, best_title))
     conn.commit()
     conn.close()
 
 # Initialize the database at the start of the script
 initialize_run_database()
 initialize_detections_table()
+initialize_detection_variants_table()
 
 def main(source=None, debug=0, log_handler=None):
     """
@@ -192,12 +221,16 @@ def main(source=None, debug=0, log_handler=None):
                         # Generate a unique detection ID for this detection within the run
                         detection_id = f"{idx}"
 
+                        # Log the detection in the detections table
+                        detection_id = log_detection_entry(run_id)
+
                         # Calculate the image paths once
                         original_image_path = os.path.join(output_dir, "book", f"{filename}_{idx}.jpg")
                         rotated_image_path = os.path.join(output_dir, "book", f"{filename}_rotated-180_{idx}.jpg")
 
                         cv2.imwrite(original_image_path, img)
                         cv2.imwrite(rotated_image_path, img_rotated_180)
+
 
                         # --- Perform OCR on the book image ---
 
@@ -249,8 +282,8 @@ def main(source=None, debug=0, log_handler=None):
                             if book_details:
                                 logging.info(f"📖 Gefundene Buchdetails: {book_details}")
 
-                            # Log the detected item in the database
-                            log_detection_entry(detection_id, run_id, variant_path, best_title)
+                            # Log the title we've associated with this variant.
+                            log_detection_variant(detection_id, variant_path, best_title)
 
                     else:
                         logging.info("Skipping ", result.names[idx], '...')
