@@ -23,11 +23,6 @@ from libs.database_manager import DatabaseManager
 
 TIMESTR_FORMAT = "%d.%m.%Y %H:%M"
 
-# Initialize the DatabaseManager
-DB_PATH = os.path.join(config.HOME_DIR, "bookshelves.db")
-db_manager = DatabaseManager(DB_PATH)
-db_manager.initialize_tables()
-
 
 def main(source=None, debug=0, log_handler=None):
     """
@@ -38,6 +33,11 @@ def main(source=None, debug=0, log_handler=None):
         debug (int): Debug level (0 for no debug, 1 for basic debug).
         log_handler (logging.Handler): Optional logging handler to add to the logger.
     """
+    
+    # Set debug level for logging
+    if debug >= 1:
+        logging.getLogger().setLevel(logging.DEBUG)
+    
     # Add the provided log handler, if any
     if log_handler:
         logging.getLogger().addHandler(log_handler)
@@ -45,7 +45,7 @@ def main(source=None, debug=0, log_handler=None):
         logging.info("A handler has been added to the logger.")
 
     # Set defaults if not provided
-# source_default = 'https://ultralytics.com/images/bus.jpg'
+    # source_default = 'https://ultralytics.com/images/bus.jpg'
     # source_default = config.HOME_DIR+'/example-files/IMG_3688.png'
     # source_default = config.HOME_DIR+'/example-files/books'
     # source_default = config.HOME_DIR+'/example-files/books.mov'
@@ -54,10 +54,11 @@ def main(source=None, debug=0, log_handler=None):
 
     # Initialize all necessary modules
     initialize_libs()
-
-    # Set debug level for logging
-    if debug >= 1:
-        logging.getLogger().setLevel(logging.DEBUG)
+        
+    # Initialize the DatabaseManager
+    DB_PATH = os.path.join(config.HOME_DIR, "bookshelves.db")
+    db_manager = DatabaseManager(DB_PATH)
+    db_manager.initialize_tables()
 
     # Record the start time of the run and log it in the database
     start_time = datetime.now()
