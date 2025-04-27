@@ -22,8 +22,11 @@ from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles, sel
 from libs.ocr_utils import ocr_onImage
 from libs.lookup_utils import lookup_book_details
 
+TIMESTR_FORMAT = "%d.%m.%Y %H:%M"
+
 # Path to the new database
 DB_PATH = os.path.join(config.HOME_DIR, "bookshelves.db")
+
 
 def initialize_run_database():
     """Create the SQLite database and runs table if they don't exist."""
@@ -159,10 +162,13 @@ def main(source=None, debug=0, log_handler=None):
         logging.getLogger().setLevel(logging.DEBUG)
 
     # Record the start time of the run and log it in the database
-    start_time = datetime.now().isoformat()
-    run_id = log_run_start(start_time)
+    start_time = datetime.now()
+    run_id = log_run_start(start_time.isoformat())
     books_detected = 0
     
+    timeStr = start_time.strftime(TIMESTR_FORMAT)
+    logging.info(f"=== Book detection starts at {timeStr} ===")
+
     # --- Detectbook spines in image ---
 
     # Load a model
@@ -289,10 +295,14 @@ def main(source=None, debug=0, log_handler=None):
                         logging.info("Skipping ", result.names[idx], '...')
 
     # Record the end time of the run
-    end_time = datetime.now().isoformat()
-
+    end_time = datetime.now()
     # Update the run statistics in the database
-    update_run_statistics(run_id, end_time, books_detected)
+    update_run_statistics(run_id, end_time.isoformat(), books_detected)
+    
+    timeStr = end_time.strftime(TIMESTR_FORMAT)
+    logging.info(f"=== Book detection concludes at {timeStr}. #Books detected: {books_detected}. ===")
+
+ 
 
 if __name__ == "__main__":
     
