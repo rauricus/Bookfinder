@@ -18,7 +18,7 @@ from libs.logging_socketio import LoggingSocketIO
 from find_books import main as find_books_main
 
 
-class FlaskApp(Flask):
+class BooksOnShelvesApp(Flask):
     def __init__(self, import_name):
         """Initialize the Flask application and its components."""
         super().__init__(import_name)
@@ -59,7 +59,7 @@ class FlaskApp(Flask):
         """Run the Flask application."""
         self.socketio.run(self, host=host, port=port, debug=debug)
 
-# Create an instance of the FlaskApp class and run the application
+# Create an instance of the BooksOnShelvesApp class and run the application
 if __name__ == '__main__':
-    flask_app = FlaskApp(__name__)
+    flask_app = BooksOnShelvesApp(__name__)
     flask_app.run()
