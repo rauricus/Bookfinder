@@ -6,8 +6,6 @@ from datetime import datetime
 
 import config  # Do this here to ensure logging is configured early
 
-import sqlite3
-
 import cv2
 from symspellpy import SymSpell
 from ultralytics import YOLO
@@ -21,115 +19,15 @@ from libs.image_utils import preprocess_for_text_area_detection, extractAndRotat
 from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles, select_best_title, compute_validity_score
 from libs.ocr_utils import ocr_onImage
 from libs.lookup_utils import lookup_book_details
+from libs.database_manager import DatabaseManager
 
 TIMESTR_FORMAT = "%d.%m.%Y %H:%M"
 
-# Path to the new database
+# Initialize the DatabaseManager
 DB_PATH = os.path.join(config.HOME_DIR, "bookshelves.db")
+db_manager = DatabaseManager(DB_PATH)
+db_manager.initialize_tables()
 
-
-def initialize_run_database():
-    """Create the SQLite database and runs table if they don't exist."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS runs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            start_time DATETIME NOT NULL,
-            end_time DATETIME,
-            books_detected INTEGER DEFAULT 0
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-def log_run_start(start_time):
-    """Log the start of a run into the database and return the run ID."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO runs (start_time)
-        VALUES (?)
-    """, (start_time,))
-    run_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return run_id
-
-def update_run_statistics(run_id, end_time, books_detected):
-    """Update the statistics of a run in the database."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE runs
-        SET end_time = ?, books_detected = ?
-        WHERE id = ?
-    """, (end_time, books_detected, run_id))
-    conn.commit()
-    conn.close()
-
-def initialize_detections_table():
-    """Create the detections table in the database if it doesn't exist."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS detections (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            run_id INTEGER NOT NULL,
-            created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (run_id) REFERENCES runs (id)
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-def log_detection_entry(run_id):
-    """Log a detected item into the detections table and return its ID."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO detections (run_id)
-        VALUES (?)
-    """, (run_id,))
-    detection_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return detection_id
-
-def initialize_detection_variants_table():
-    """Create the detection_variants table in the database if it doesn't exist."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS detection_variants (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            detection_id INTEGER NOT NULL,
-            image_path TEXT NOT NULL,
-            best_title TEXT,
-            created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (detection_id) REFERENCES detections (id)
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-def log_detection_variant(detection_id, image_path, best_title):
-    """Log a variant of a detection into the detection_variants table."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO detection_variants (detection_id, image_path, best_title)
-        VALUES (?, ?, ?)
-    """, (detection_id, image_path, best_title))
-    conn.commit()
-    conn.close()
-
-# Initialize the database at the start of the script
-initialize_run_database()
-initialize_detections_table()
-initialize_detection_variants_table()
 
 def main(source=None, debug=0, log_handler=None):
     """
@@ -147,7 +45,7 @@ def main(source=None, debug=0, log_handler=None):
         logging.info("A handler has been added to the logger.")
 
     # Set defaults if not provided
-    # source_default = 'https://ultralytics.com/images/bus.jpg'
+# source_default = 'https://ultralytics.com/images/bus.jpg'
     # source_default = config.HOME_DIR+'/example-files/IMG_3688.png'
     # source_default = config.HOME_DIR+'/example-files/books'
     # source_default = config.HOME_DIR+'/example-files/books.mov'
@@ -163,9 +61,9 @@ def main(source=None, debug=0, log_handler=None):
 
     # Record the start time of the run and log it in the database
     start_time = datetime.now()
-    run_id = log_run_start(start_time.isoformat())
+    run_id = db_manager.log_run_start(start_time.isoformat())
     books_detected = 0
-    
+
     timeStr = start_time.strftime(TIMESTR_FORMAT)
     logging.info(f"=== Book detection starts at {timeStr} ===")
 
@@ -228,7 +126,7 @@ def main(source=None, debug=0, log_handler=None):
                         detection_id = f"{idx}"
 
                         # Log the detection in the detections table
-                        detection_id = log_detection_entry(run_id)
+                        detection_id = db_manager.log_detection_entry(run_id)
 
                         # Calculate the image paths once
                         original_image_path = os.path.join(output_dir, "book", f"{filename}_{idx}.jpg")
@@ -289,7 +187,7 @@ def main(source=None, debug=0, log_handler=None):
                                 logging.info(f"📖 Gefundene Buchdetails: {book_details}")
 
                             # Log the title we've associated with this variant.
-                            log_detection_variant(detection_id, variant_path, best_title)
+                            db_manager.log_detection_variant(detection_id, variant_path, best_title)
 
                     else:
                         logging.info("Skipping ", result.names[idx], '...')
@@ -297,18 +195,17 @@ def main(source=None, debug=0, log_handler=None):
     # Record the end time of the run
     end_time = datetime.now()
     # Update the run statistics in the database
-    update_run_statistics(run_id, end_time.isoformat(), books_detected)
-    
+    db_manager.update_run_statistics(run_id, end_time.isoformat(), books_detected)
+
     timeStr = end_time.strftime(TIMESTR_FORMAT)
     logging.info(f"=== Book detection concludes at {timeStr}. #Books detected: {books_detected}. ===")
 
- 
 
 if __name__ == "__main__":
-    
+
     parser = argparse.ArgumentParser(description="Detect and look up books in an image (or video).")
     parser.add_argument("source", type=str, nargs='?', help="Path to image, video, or directory.'")
     parser.add_argument('--debug','-d', action='count', default=0, help="Enable debug mode. (level 1: show detections)")
     args = parser.parse_args()
-    
+
     main(args.source, args.debug)

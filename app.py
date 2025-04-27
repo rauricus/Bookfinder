@@ -11,7 +11,6 @@ import eventlet
 #   that all relevant operations are non-blocking and work together with eventlet.
 eventlet.monkey_patch()
 
-
 import config  # Ensure logging is configured early
 
 from flask import Flask, request, render_template, jsonify
@@ -56,7 +55,6 @@ def flush_log_buffer():
 socketio_handler = BufferedSocketIOHandler(socketio)
 socketio_handler.setLevel(logging.INFO)
 socketio_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-
 
 @app.route('/')
 def index():
