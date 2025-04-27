@@ -72,6 +72,7 @@ def initialize_detections_table():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS detections (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            detection_id TEXT NOT NULL,
             run_id INTEGER NOT NULL,
             image_path TEXT NOT NULL,
             best_title TEXT,
@@ -83,14 +84,14 @@ def initialize_detections_table():
     conn.commit()
     conn.close()
 
-def log_detection_entry(run_id, image_path, best_title):
+def log_detection_entry(detection_id, run_id, image_path, best_title):
     """Log a detected item into the detections table."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO detections (run_id, image_path, best_title)
-        VALUES (?, ?, ?)
-    """, (run_id, image_path, best_title))
+        INSERT INTO detections (detection_id, run_id, image_path, best_title)
+        VALUES (?, ?, ?, ?)
+    """, (detection_id, run_id, image_path, best_title))
     conn.commit()
     conn.close()
 
@@ -188,6 +189,9 @@ def main(source=None, debug=0, log_handler=None):
                         # Ensure the image is wider than tall and also return a variant rotated by 180 degrees.
                         img, img_rotated_180 = preprocess_for_text_area_detection(img_cropped)
 
+                        # Generate a unique detection ID for this detection within the run
+                        detection_id = f"{idx}"
+
                         # Calculate the image paths once
                         original_image_path = os.path.join(output_dir, "book", f"{filename}_{idx}.jpg")
                         rotated_image_path = os.path.join(output_dir, "book", f"{filename}_rotated-180_{idx}.jpg")
@@ -246,7 +250,7 @@ def main(source=None, debug=0, log_handler=None):
                                 logging.info(f"📖 Gefundene Buchdetails: {book_details}")
 
                             # Log the detected item in the database
-                            log_detection_entry(run_id, variant_path, best_title)
+                            log_detection_entry(detection_id, run_id, variant_path, best_title)
 
                     else:
                         logging.info("Skipping ", result.names[idx], '...')
