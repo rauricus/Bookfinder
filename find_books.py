@@ -2,8 +2,11 @@ import os
 import sys
 import argparse
 import logging
+from datetime import datetime
 
 import config  # Do this here to ensure logging is configured early
+
+import sqlite3
 
 import cv2
 from symspellpy import SymSpell
@@ -19,7 +22,37 @@ from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles, sel
 from libs.ocr_utils import ocr_onImage
 from libs.lookup_utils import lookup_book_details
 
+# Path to the new database
+DB_PATH = os.path.join(config.HOME_DIR, "bookshelves.db")
 
+def initialize_run_database():
+    """Create the SQLite database and runs table if they don't exist."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            start_time TEXT NOT NULL,
+            end_time TEXT,
+            books_detected INTEGER DEFAULT 0
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def log_run_statistics(start_time, end_time, books_detected):
+    """Log the statistics of a run into the database."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO runs (start_time, end_time, books_detected)
+        VALUES (?, ?, ?)
+    """, (start_time, end_time, books_detected))
+    conn.commit()
+    conn.close()
+
+# Initialize the database at the start of the script
+initialize_run_database()
 
 def main(source=None, debug=0, log_handler=None):
     """
@@ -51,6 +84,9 @@ def main(source=None, debug=0, log_handler=None):
     if debug >= 1:
         logging.getLogger().setLevel(logging.DEBUG)
 
+    # Record the start time of the run
+    start_time = datetime.now().isoformat()
+    books_detected = 0
     
     # --- Detectbook spines in image ---
 
@@ -91,6 +127,7 @@ def main(source=None, debug=0, log_handler=None):
 
                     # Check if the detection is of the "book" class
                     if "book" in result.names.values():
+                        books_detected += 1
 
                         logging.info(f"Book {idx} found")
 
@@ -161,6 +198,12 @@ def main(source=None, debug=0, log_handler=None):
 
                     else:
                         logging.info("Skipping ", result.names[idx], '...')
+
+    # Record the end time of the run
+    end_time = datetime.now().isoformat()
+
+    # Log the run statistics
+    log_run_statistics(start_time, end_time, books_detected)
 
 if __name__ == "__main__":
     
