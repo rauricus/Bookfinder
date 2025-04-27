@@ -40,14 +40,28 @@ def initialize_run_database():
     conn.commit()
     conn.close()
 
-def log_run_statistics(start_time, end_time, books_detected):
-    """Log the statistics of a run into the database."""
+def log_run_start(start_time):
+    """Log the start of a run into the database and return the run ID."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO runs (start_time, end_time, books_detected)
-        VALUES (?, ?, ?)
-    """, (start_time, end_time, books_detected))
+        INSERT INTO runs (start_time)
+        VALUES (?)
+    """, (start_time,))
+    run_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return run_id
+
+def update_run_statistics(run_id, end_time, books_detected):
+    """Update the statistics of a run in the database."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE runs
+        SET end_time = ?, books_detected = ?
+        WHERE id = ?
+    """, (end_time, books_detected, run_id))
     conn.commit()
     conn.close()
 
@@ -84,8 +98,9 @@ def main(source=None, debug=0, log_handler=None):
     if debug >= 1:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    # Record the start time of the run
+    # Record the start time of the run and log it in the database
     start_time = datetime.now().isoformat()
+    run_id = log_run_start(start_time)
     books_detected = 0
     
     # --- Detectbook spines in image ---
@@ -202,8 +217,8 @@ def main(source=None, debug=0, log_handler=None):
     # Record the end time of the run
     end_time = datetime.now().isoformat()
 
-    # Log the run statistics
-    log_run_statistics(start_time, end_time, books_detected)
+    # Update the run statistics in the database
+    update_run_statistics(run_id, end_time, books_detected)
 
 if __name__ == "__main__":
     
