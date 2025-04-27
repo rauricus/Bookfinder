@@ -65,8 +65,38 @@ def update_run_statistics(run_id, end_time, books_detected):
     conn.commit()
     conn.close()
 
+def initialize_detections_table():
+    """Create the detections table in the database if it doesn't exist."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS detections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id INTEGER NOT NULL,
+            image_path TEXT NOT NULL,
+            best_title TEXT,
+            created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (run_id) REFERENCES runs (id)
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def log_detection_entry(run_id, image_path, best_title):
+    """Log a detected item into the detections table."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO detections (run_id, image_path, best_title)
+        VALUES (?, ?, ?)
+    """, (run_id, image_path, best_title))
+    conn.commit()
+    conn.close()
+
 # Initialize the database at the start of the script
 initialize_run_database()
+initialize_detections_table()
 
 def main(source=None, debug=0, log_handler=None):
     """
@@ -158,21 +188,25 @@ def main(source=None, debug=0, log_handler=None):
                         # Ensure the image is wider than tall and also return a variant rotated by 180 degrees.
                         img, img_rotated_180 = preprocess_for_text_area_detection(img_cropped)
 
-                        cv2.imwrite(os.path.join(output_dir, "book", f"{filename}_{idx}.jpg"), img)
-                        cv2.imwrite(os.path.join(output_dir, "book", f"{filename}_rotated-180_{idx}.jpg"), img_rotated_180)
+                        # Calculate the image paths once
+                        original_image_path = os.path.join(output_dir, "book", f"{filename}_{idx}.jpg")
+                        rotated_image_path = os.path.join(output_dir, "book", f"{filename}_rotated-180_{idx}.jpg")
+
+                        cv2.imwrite(original_image_path, img)
+                        cv2.imwrite(rotated_image_path, img_rotated_180)
 
                         # --- Perform OCR on the book image ---
 
                         # Perform OCR on all (both) image variants.
                         image_variants = [
-                            (img, f"{filename}_{idx}.jpg"),  # Original image
-                            (img_rotated_180, f"{filename}_rotated-180_{idx}.jpg")  # 180-degree rotated image
+                            (img, original_image_path),  # Original image
+                            (img_rotated_180, rotated_image_path)  # 180-degree rotated image
                         ]
 
                         # Iterate over each variant, process the OCR, and print the result
-                        for variant_img, variant_filename in image_variants:
+                        for variant_img, variant_path in image_variants:
 
-                            logging.info(f"{os.path.join(output_dir, 'book', variant_filename)} ->")
+                            logging.info(f"{variant_path} ->")
 
                             detected_texts = ocr_onImage(variant_img, east_model, debug)
 
@@ -210,6 +244,9 @@ def main(source=None, debug=0, log_handler=None):
                             book_details = lookup_book_details(best_title)
                             if book_details:
                                 logging.info(f"📖 Gefundene Buchdetails: {book_details}")
+
+                            # Log the detected item in the database
+                            log_detection_entry(run_id, variant_path, best_title)
 
                     else:
                         logging.info("Skipping ", result.names[idx], '...')
