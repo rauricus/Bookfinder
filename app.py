@@ -16,8 +16,7 @@ eventlet.monkey_patch()
 from flask import Flask, request, render_template, jsonify
 from libs.logging_socketio import LoggingSocketIO
 from libs.database_manager import DatabaseManager
-
-from find_books import main as find_books_main
+from libs.book_finder import BookFinder
 
 
 class BooksOnShelvesApp(Flask):
@@ -45,8 +44,13 @@ class BooksOnShelvesApp(Flask):
                 return jsonify({"error": "Invalid or missing source file."}), 400
 
             try:
-                # Start the find_books function in a separate thread
-                thread = threading.Thread(target=find_books_main, args=(source, debug, self.socketio.log_handler), daemon=True)
+                # Create an instance of BookFinder
+                book_finder = BookFinder(debug, self.socketio.log_handler)
+
+                # Start the BookFinder execution in a separate thread
+                # Note: The trailing comma in args=(source,) is crucial to ensure this is treated as a tuple.
+                #       Without the comma, `source` would be interpreted as a string (iterable), causing unexpected behavior.
+                thread = threading.Thread(target=book_finder.findBooks, args=(source,), daemon=True)
                 thread.start()
 
                 return render_template('run.html')
