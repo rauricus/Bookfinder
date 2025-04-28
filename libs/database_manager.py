@@ -95,3 +95,18 @@ class DatabaseManager:
         """, (detection_id, image_path, best_title))
         conn.commit()
         conn.close()
+
+    def get_detections(self, run_id=None):
+        """Retrieve detections from the database, optionally filtered by run_id."""
+        conn = self._connect()
+        cursor = conn.cursor()
+
+        if run_id:
+            cursor.execute("SELECT * FROM detections WHERE run_id = ?", (run_id,))
+        else:
+            cursor.execute("SELECT * FROM detections")
+
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [dict(id=row[0], run_id=row[1], data=row[2]) for row in rows]

@@ -15,6 +15,7 @@ eventlet.monkey_patch()
 
 from flask import Flask, request, render_template, jsonify
 from libs.logging_socketio import LoggingSocketIO
+from libs.database_manager import DatabaseManager
 
 from find_books import main as find_books_main
 
@@ -24,6 +25,7 @@ class BooksOnShelvesApp(Flask):
         """Initialize the Flask application and its components."""
         super().__init__(import_name)
         self.socketio = LoggingSocketIO(self)
+        self.db_manager = DatabaseManager('bookshelves.db')
 
         # Register routes
         self._register_routes()
@@ -43,7 +45,7 @@ class BooksOnShelvesApp(Flask):
                 return jsonify({"error": "Invalid or missing source file."}), 400
 
             try:
-                # Pass the SocketIOHandler to the main function
+                # Start the find_books function in a separate thread
                 thread = threading.Thread(target=find_books_main, args=(source, debug, self.socketio.log_handler), daemon=True)
                 thread.start()
 
@@ -58,23 +60,12 @@ class BooksOnShelvesApp(Flask):
 
         @self.route('/detections', methods=['GET'])
         def get_detections():
+            run_id = request.args.get('run_id')  # Run-ID aus den Query-Parametern abrufen
             try:
-                # Verbindung zur Datenbank herstellen
-                conn = sqlite3.connect('bookshelves.db')
-                cursor = conn.cursor()
-
-                # Daten aus der Tabelle 'detections' abrufen
-                cursor.execute("SELECT * FROM detections")
-                rows = cursor.fetchall()
-
-                # Ergebnisse formatieren
-                detections = [dict(id=row[0], data=row[1]) for row in rows]
-
+                detections = self.db_manager.get_detections(run_id)
                 return jsonify({"detections": detections})
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
-            finally:
-                conn.close()
 
     def run(self, host='0.0.0.0', port=5010, debug=True):
         """Run the Flask application."""
