@@ -2,6 +2,7 @@ import os
 import logging
 import threading
 import eventlet
+import sqlite3
 
 # Apply eventlet monkey-patching.
 #   Note this has to be done HERE, before importing any other modules. The module throws an
@@ -54,6 +55,26 @@ class BooksOnShelvesApp(Flask):
         @self.route('/test_socket')
         def test_socket():
             return self.socketio.test_socket()
+
+        @self.route('/detections', methods=['GET'])
+        def get_detections():
+            try:
+                # Verbindung zur Datenbank herstellen
+                conn = sqlite3.connect('bookshelves.db')
+                cursor = conn.cursor()
+
+                # Daten aus der Tabelle 'detections' abrufen
+                cursor.execute("SELECT * FROM detections")
+                rows = cursor.fetchall()
+
+                # Ergebnisse formatieren
+                detections = [dict(id=row[0], data=row[1]) for row in rows]
+
+                return jsonify({"detections": detections})
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+            finally:
+                conn.close()
 
     def run(self, host='0.0.0.0', port=5010, debug=True):
         """Run the Flask application."""

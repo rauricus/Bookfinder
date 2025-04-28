@@ -3,12 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logs</title>
+    <title>Logs and Detections</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+        }
+        .tab {
+            display: inline-block;
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f4f4f4;
+            border: 1px solid #ccc;
+            border-bottom: none;
+        }
+        .tab.active {
+            background-color: #fff;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        .tab-content.active {
+            display: block;
         }
         pre {
             white-space: pre-wrap;
@@ -22,14 +42,57 @@
     </style>
 </head>
 <body>
-    <h1>Log Output</h1>
-    <pre id="log-container">Loading logs...</pre>
+    <h1>Logs and Detections</h1>
+    <div>
+        <div class="tab active" id="log-tab">Log</div>
+        <div class="tab" id="detections-tab">Detections</div>
+    </div>
+    <div class="tab-content active" id="log-content">
+        <pre id="log-container">Loading logs...</pre>
+    </div>
+    <div class="tab-content" id="detections-content">
+        <ul id="detections-list">Loading detections...</ul>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
     <script>
         const socket = io();
         const logContainer = document.getElementById('log-container');
+        const detectionsList = document.getElementById('detections-list');
 
+        // Tab switching logic
+        const logTab = document.getElementById('log-tab');
+        const detectionsTab = document.getElementById('detections-tab');
+        const logContent = document.getElementById('log-content');
+        const detectionsContent = document.getElementById('detections-content');
+
+        logTab.addEventListener('click', () => {
+            logTab.classList.add('active');
+            detectionsTab.classList.remove('active');
+            logContent.classList.add('active');
+            detectionsContent.classList.remove('active');
+        });
+
+        detectionsTab.addEventListener('click', () => {
+            detectionsTab.classList.add('active');
+            logTab.classList.remove('active');
+            detectionsContent.classList.add('active');
+            logContent.classList.remove('active');
+
+            // Fetch detections
+            fetch('/detections')
+                .then(response => response.json())
+                .then(data => {
+                    detectionsList.innerHTML = '';
+                    data.detections.forEach((detection, index) => {
+                        const li = document.createElement('li');
+                        li.textContent = `Detection ${index + 1}: ${detection}`;
+                        detectionsList.appendChild(li);
+                    });
+                });
+        });
+
+        // Log updates
         socket.on('log_message', (data) => {
             logContainer.textContent += data.data + '\n';
             logContainer.scrollTop = logContainer.scrollHeight; // Auto-scroll to the bottom
