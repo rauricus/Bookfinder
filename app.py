@@ -71,6 +71,29 @@ class BooksOnShelvesApp(Flask):
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
 
+        @self.route('/runs', methods=['GET'])
+        def get_runs():
+            try:
+                # Fetch all runs from the database
+                runs = self.db_manager.get_all_runs()
+
+                # Format the runs with status
+                formatted_runs = []
+                for run in runs:
+                    status = "running" if run['end_time'] is None else "ended"
+                    formatted_runs.append({
+                        "run_id": run['run_id'],
+                        "start_time": run['start_time'],
+                        "end_time": run['end_time'],
+                        "books_detected": run['books_detected'],
+                        "status": status
+                    })
+
+                return jsonify({"runs": formatted_runs})
+
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
     def run(self, host='0.0.0.0', port=5010, debug=True):
         """Run the Flask application."""
         self.socketio.run(self, host=host, port=port, debug=debug)

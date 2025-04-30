@@ -110,3 +110,22 @@ class DatabaseManager:
         conn.close()
 
         return [dict(id=row[0], run_id=row[1], data=row[2]) for row in rows]
+
+    def get_all_runs(self):
+        """Retrieve all runs from the database with their details."""
+        conn = self._connect()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT id, start_time, end_time, books_detected FROM runs")
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [
+            {
+                "run_id": row[0],
+                "start_time": row[1],
+                "end_time": row[2],
+                "books_detected": row[3]
+            }
+            for row in rows
+        ]

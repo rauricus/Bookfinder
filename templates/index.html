@@ -19,5 +19,56 @@
         <br><br>
         <button type="submit">Run</button>
     </form>
+
+    <h2>Run History</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Run ID</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Books Detected</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan="5" style="text-align: center;">Fetching runs...</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        async function fetchRunHistory() {
+            try {
+                const response = await fetch('/runs');
+                const data = await response.json();
+
+                if (data.runs) {
+                    const tableBody = document.querySelector('table tbody');
+                    tableBody.innerHTML = ''; // Clear existing rows
+
+                    data.runs.forEach(run => {
+                        const row = document.createElement('tr');
+
+                        row.innerHTML = `
+                            <td>${run.run_id}</td>
+                            <td>${run.start_time}</td>
+                            <td>${run.end_time || ''}</td>
+                            <td>${run.books_detected || ''}</td>
+                            <td>${run.status}</td>
+                        `;
+
+                        tableBody.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching run history:', error);
+            }
+        }
+
+        // Fetch run history on page load
+        window.onload = fetchRunHistory;
+    </script>
 </body>
 </html>
