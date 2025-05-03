@@ -4,24 +4,52 @@ import eventlet
 from flask_socketio import SocketIO
 from libs.socketio_log_handler import SocketIOLogHandler
 
-class LoggingSocketIO(SocketIO):
+class LoggingSocketIO:
     """
-    An enhanced version of SocketIO that includes a log handler for buffering
-    and emitting log messages.
+    Ein Singleton für Socket.IO-Logging.
+    """
+    _instance = None
+    _socketio = None
+    _log_handler = None
 
-    This class extends the functionality of Flask-SocketIO by integrating a
-    SocketIOLogHandler for managing log messages.
-    """
-    def __init__(self, app, async_mode='eventlet', **kwargs):
-        """Initialize the EnhancedLogging with a Flask app."""
-        
-        super().__init__(app, async_mode=async_mode, **kwargs)
-        
-        self.log_handler = SocketIOLogHandler(self)
-        self.log_handler.setLevel('INFO')
-        self.log_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    @classmethod
+    def initialize(cls, app):
+        """Initialisiert die Socket.IO-Instanz mit einer Flask-App."""
+        if not cls._instance:
+            cls._instance = cls()
+            cls._socketio = SocketIO(app, async_mode='eventlet')
+            cls._log_handler = SocketIOLogHandler(cls._socketio)
+            cls._log_handler.setLevel('INFO')
+            cls._log_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+    @classmethod
+    def get_instance(cls):
+        """Gibt die Socket.IO-Instanz zurück."""
+        if not cls._instance:
+            raise RuntimeError("LoggingSocketIO muss zuerst mit initialize() initialisiert werden")
+        return cls._instance
+
+    @classmethod
+    def get_socketio(cls):
+        """Gibt die Socket.IO-Instanz zurück."""
+        if not cls._socketio:
+            raise RuntimeError("LoggingSocketIO muss zuerst mit initialize() initialisiert werden")
+        return cls._socketio
+
+    @classmethod
+    def get_log_handler(cls):
+        """Gibt den Log-Handler zurück."""
+        if not cls._log_handler:
+            raise RuntimeError("LoggingSocketIO muss zuerst mit initialize() initialisiert werden")
+        return cls._log_handler
+
+    def emit(self, event, data):
+        """Sendet ein Event über Socket.IO."""
+        if not self._socketio:
+            raise RuntimeError("LoggingSocketIO muss zuerst mit initialize() initialisiert werden")
+        self._socketio.emit(event, data)
 
     def test_socket(self):
-        """Emit a test message to the WebSocket."""
+        """Sendet eine Test-Nachricht über Socket.IO."""
         self.emit('log_message', {'data': 'Test message from server'})
         return "Test message sent to WebSocket. Check the browser console.", 200
