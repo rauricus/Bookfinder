@@ -26,7 +26,7 @@ class BookFinderThread(threading.Thread):
         
         # BookFinder mit dem SocketIO LogHandler und DatabaseManager initialisieren
         self.book_finder = BookFinder(
-            debug=1, 
+            debug=0, 
             log_handler=LoggingSocketIO.get_log_handler(), 
             db_manager=self.db_manager
         )
