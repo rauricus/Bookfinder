@@ -1,4 +1,3 @@
-
 import os
 import sys
 import argparse
@@ -27,10 +26,11 @@ TIMESTR_FORMAT = "%d.%m.%Y %H:%M"
 
 class BookFinder:
     
-    def __init__(self, debug=0, log_handler=None):
+    def __init__(self, debug=0, log_handler=None, db_manager=None):
         
         self.debug = debug
         self.log_handler = log_handler
+        self.on_detection = None  # Callback für neue Detections
 
         # Set debug level for logging
         if self.debug >= 1:
@@ -44,10 +44,13 @@ class BookFinder:
         # Initialize all necessary modules
         initialize_libs()
 
-        # Initialize the DatabaseManager
-        self.DB_PATH = os.path.join(config.HOME_DIR, "bookshelves.db")
-        self.db_manager = DatabaseManager(self.DB_PATH)
-        self.db_manager.initialize_tables()
+        # Initialize or use provided DatabaseManager
+        if db_manager:
+            self.db_manager = db_manager
+        else:
+            # Fallback: Create new DatabaseManager if none provided
+            self.DB_PATH = os.path.join(config.HOME_DIR, "bookshelves.db")
+            self.db_manager = DatabaseManager(self.DB_PATH)
 
         # Set default source
         # source_default = 'https://ultralytics.com/images/bus.jpg'
@@ -106,9 +109,9 @@ class BookFinder:
             for result in results:
 
                 if len(result) > 0:
-
-                    logging.debug(result.to_json(), file=text_file)
-
+                    
+                    logging.debug(result.to_json())  # Entferne file=text_file
+                
                     for idx, obb in enumerate(result.obb.xyxyxyxy):
 
                         # Check if the detection is of the "book" class
@@ -195,6 +198,16 @@ class BookFinder:
 
                                 # Log the title we've associated with this variant.
                                 self.db_manager.log_detection_variant(detection_id, variant_path, best_title)
+
+                                # Sende Detection-Event über den Callback
+                                if self.on_detection:
+                                    detection_data = {
+                                        'id': detection_id,
+                                        'image_path': variant_path,
+                                        'title': best_title,
+                                        'book_details': book_details
+                                    }
+                                    self.on_detection(detection_data)
 
                         else:
                             logging.info("Skipping ", result.names[idx], '...')
