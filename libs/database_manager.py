@@ -4,11 +4,12 @@ from datetime import datetime
 class DatabaseManager:
     def __init__(self, db_path):
         self.db_path = db_path
+        self._initialize_tables()  # Initialisiere Tabellen direkt beim Erstellen
 
     def _connect(self):
         return sqlite3.connect(self.db_path)
 
-    def initialize_tables(self):
+    def _initialize_tables(self):
         """Initialize all necessary tables in the database."""
         conn = self._connect()
         cursor = conn.cursor()
