@@ -12,93 +12,78 @@ import sqlite3
 #   that all relevant operations are non-blocking and work together with eventlet.
 eventlet.monkey_patch()
 
-
 from flask import Flask, request, render_template, jsonify
-from libs.logging_socketio import LoggingSocketIO
+from libs.book_finder_thread import BookFinderThread
 from libs.database_manager import DatabaseManager
-from libs.book_finder import BookFinder
+from libs.logging_socketio import LoggingSocketIO
 
 
 class BooksOnShelvesApp(Flask):
-    def __init__(self, import_name):
-        """Initialize the Flask application and its components."""
-        super().__init__(import_name)
-        self.socketio = LoggingSocketIO(self)
-        self.db_manager = DatabaseManager('bookshelves.db')
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
+        # Initialize logging
+        logging.basicConfig(level=logging.INFO)
+        
+        # Initialize SocketIO as Singleton
+        LoggingSocketIO.initialize(self)
+        
+        # Initialize database manager as a singleton
+        self.db_manager = DatabaseManager(os.path.join(os.getcwd(), "bookshelves.db"))
+        
         # Register routes
-        self._register_routes()
+        self.route("/")(self.index)
+        self.route("/run", methods=['GET', 'POST'])(self.run_page)
+        self.route("/runs")(self.get_runs)
+        self.route("/runs/<run_id>/detections")(self.get_detections)
 
-    def _register_routes(self):
-        """Register all Flask routes."""
-        @self.route('/')
-        def index():
-            return render_template('index.html')
+    def index(self):
+        return render_template("index.html")
 
-        @self.route('/run', methods=['POST'])
-        def run_find_books():
-            source = request.form.get('source')
-            debug = int(request.form.get('debug', 0))
-
-            if not source or not os.path.exists(source):
-                return jsonify({"error": "Invalid or missing source file."}), 400
+    def run_page(self):
+        if request.method == 'POST':
+            # Get parameters from the request
+            source = request.form.get("source")
+            debug = request.form.get("debug", "0")
+            
+            if not source:
+                return jsonify({"error": "Keine Quelle angegeben"}), 400
 
             try:
-                # Create an instance of BookFinder
-                book_finder = BookFinder(debug, self.socketio.log_handler)
-
-                # Start the BookFinder execution in a separate thread
-                # Note: The trailing comma in args=(source,) is crucial to ensure this is treated as a tuple.
-                #       Without the comma, `source` would be interpreted as a string (iterable), causing unexpected behavior.
-                thread = threading.Thread(target=book_finder.findBooks, args=(source,), daemon=True)
-                thread.start()
-
-                return render_template('run.html')
-
+                # Starte BookFinder in einem separaten Thread
+                finder_thread = BookFinderThread(self, source, self.db_manager)
+                finder_thread.start()
+                
+                # Weiterleitung zur run.html, die die Live-Updates anzeigt
+                return render_template("run.html")
             except Exception as e:
+                logging.error(f"Fehler beim Starten der Bucherkennung: {str(e)}")
                 return jsonify({"error": str(e)}), 500
+                
+        # GET request
+        return render_template("run.html")
 
-        @self.route('/test_socket')
-        def test_socket():
-            return self.socketio.test_socket()
+    def get_runs(self):
+        """Gibt eine Liste aller Runs zurück."""
+        try:
+            runs = self.db_manager.get_all_runs()
+            return jsonify({"runs": runs})
+        except Exception as e:
+            logging.error(f"Fehler beim Abrufen der Runs: {str(e)}")
+            return jsonify({"error": str(e)}), 500
 
-        @self.route('/detections', methods=['GET'])
-        def get_detections():
-            run_id = request.args.get('run_id')  # Run-ID aus den Query-Parametern abrufen
-            try:
-                detections = self.db_manager.get_detections(run_id)
-                return jsonify({"detections": detections})
-            except Exception as e:
-                return jsonify({"error": str(e)}), 500
+    def get_detections(self, run_id):
+        """Gibt alle Detections für einen bestimmten Run zurück."""
+        try:
+            detections = self.db_manager.get_detections_for_run(run_id)
+            return jsonify(detections)
+        except Exception as e:
+            logging.error(f"Fehler beim Abrufen der Detections: {str(e)}")
+            return jsonify({"error": str(e)}), 500
 
-        @self.route('/runs', methods=['GET'])
-        def get_runs():
-            try:
-                # Fetch all runs from the database
-                runs = self.db_manager.get_all_runs()
-
-                # Format the runs with status
-                formatted_runs = []
-                for run in runs:
-                    status = "running" if run['end_time'] is None else "ended"
-                    formatted_runs.append({
-                        "run_id": run['run_id'],
-                        "start_time": run['start_time'],
-                        "end_time": run['end_time'],
-                        "books_detected": run['books_detected'],
-                        "status": status
-                    })
-
-                return jsonify({"runs": formatted_runs})
-
-            except Exception as e:
-                return jsonify({"error": str(e)}), 500
-
-    def run(self, host='0.0.0.0', port=5010, debug=True):
-        """Run the Flask application."""
-        self.socketio.run(self, host=host, port=port, debug=debug)
 
 # Create an instance of the BooksOnShelvesApp class and run the application
 if __name__ == '__main__':
     flask_app = BooksOnShelvesApp(__name__)
-    flask_app.run()
+    # Verwende die Singleton-Instanz von SocketIO
+    LoggingSocketIO.get_socketio().run(flask_app, host='0.0.0.0', port=5010)
