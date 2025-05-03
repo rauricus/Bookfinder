@@ -45,6 +45,11 @@
             background-color: #fff;
             border: 1px solid #eee;
         }
+        .placeholder {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -54,10 +59,12 @@
         <div class="tab" id="detections-tab">Detections</div>
     </div>
     <div class="tab-content active" id="log-content">
-        <pre id="log-container">Warte auf Logs...</pre>
+        <pre id="log-container"></pre>
+        <div id="log-placeholder" class="placeholder">Warte auf Logs...</div>
     </div>
     <div class="tab-content" id="detections-content">
-        <div id="detections-list">Noch keine Detections vorhanden...</div>
+        <div id="detections-list"></div>
+        <div id="detections-placeholder" class="placeholder">Noch keine Detections vorhanden...</div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
@@ -65,6 +72,8 @@
         const socket = io();
         const logContainer = document.getElementById('log-container');
         const detectionsList = document.getElementById('detections-list');
+        const logPlaceholder = document.getElementById('log-placeholder');
+        const detectionsPlaceholder = document.getElementById('detections-placeholder');
 
         // Tab switching logic
         const logTab = document.getElementById('log-tab');
@@ -90,6 +99,11 @@
         socket.on('log_message', (data) => {
             logContainer.textContent += data.data + '\n';
             logContainer.scrollTop = logContainer.scrollHeight; // Auto-scroll to bottom
+            
+            // Verstecke den Platzhalter, sobald Logs vorhanden sind
+            if (logContainer.textContent.trim() !== '') {
+                logPlaceholder.style.display = 'none';
+            }
         });
 
         // Detection updates
@@ -102,6 +116,9 @@
                 Titel: ${data.title || 'Kein Titel erkannt'}
             `;
             detectionsList.appendChild(detectionDiv);
+            
+            // Verstecke den Platzhalter, sobald Detections vorhanden sind
+            detectionsPlaceholder.style.display = 'none';
         });
     </script>
 </body>
