@@ -70,9 +70,13 @@ class BookFinder:
         # Use default source if not provided
         source = source or self.source_default
 
-        # Record the start time of the run and log it in the database
+        # Record the start time of the run
         start_time = datetime.now()
-        run_id = self.db_manager.log_run_start(start_time.isoformat())
+
+        # Log the run start
+        run_id = self.db_manager.log_run_start(
+            start_time.isoformat()
+        )
 
         timeStr = start_time.strftime(TIMESTR_FORMAT)
         logging.info(f"=== Book detection starts at {timeStr} ===")
@@ -94,6 +98,23 @@ class BookFinder:
         # Create the output directory, if needed
         output_dir = get_next_directory(config.OUTPUT_DIR)
         os.makedirs(os.path.join(output_dir, "book"), exist_ok=True)
+
+        # Convert source to relative path if it's a local file        
+        rel_source = None
+        if os.path.isfile(source):
+            try:
+                rel_source = os.path.relpath(source, config.HOME_DIR)
+            except ValueError:
+                # Falls der Pfad auf einem anderen Laufwerk liegt oder ein URL ist
+                rel_source = source
+        rel_output = os.path.relpath(output_dir, config.HOME_DIR)
+
+        # Update the run with the input and output paths
+        self.db_manager.update_run_paths(
+            run_id,
+            input_file=rel_source,
+            output_dir=rel_output
+        )
 
         # Get only filename with no directories and no extension
         filename = os.path.splitext(os.path.basename(source))[0]

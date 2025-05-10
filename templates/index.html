@@ -29,6 +29,8 @@
                 <th>End Time</th>
                 <th>Books Detected</th>
                 <th>Status</th>
+                <th>Input File</th>
+                <th>Output Dir</th>
             </tr>
         </thead>
         <tbody>
@@ -56,12 +58,14 @@
                             <td>${run.end_time || 'Läuft...'}</td>
                             <td>${run.books_detected || '0'}</td>
                             <td>${run.end_time ? 'Abgeschlossen' : 'Läuft...'}</td>
+                            <td>${run.input_file || '-'}</td>
+                            <td>${run.output_dir || '-'}</td>
                         `;
 
                         tableBody.appendChild(row);
                     });
                 } else {
-                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Noch keine Runs vorhanden</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Noch keine Runs vorhanden</td></tr>';
                 }
             } catch (error) {
                 console.error('Error fetching run history:', error);

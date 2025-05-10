@@ -19,7 +19,9 @@ class DatabaseManager:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 start_time DATETIME NOT NULL,
                 end_time DATETIME,
-                books_detected INTEGER DEFAULT 0
+                books_detected INTEGER DEFAULT 0,
+                output_dir TEXT,
+                input_file TEXT
             )
         """)
 
@@ -48,14 +50,21 @@ class DatabaseManager:
         conn.commit()
         conn.close()
 
-    def log_run_start(self, start_time):
-        """Log the start of a run into the database and return the run ID."""
+    def log_run_start(self, start_time, input_file=None, output_dir=None):
+        """
+        Log the start of a run into the database and return the run ID.
+        
+        Args:
+            start_time: ISO format datetime string
+            input_file: Relative path to the input file
+            output_dir: Relative path to the output directory
+        """
         conn = self._connect()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO runs (start_time)
-            VALUES (?)
-        """, (start_time,))
+            INSERT INTO runs (start_time, input_file, output_dir)
+            VALUES (?, ?, ?)
+        """, (start_time, input_file, output_dir))
         run_id = cursor.lastrowid
         conn.commit()
         conn.close()
@@ -70,6 +79,24 @@ class DatabaseManager:
             SET end_time = ?, books_detected = ?
             WHERE id = ?
         """, (end_time, books_detected, run_id))
+        conn.commit()
+        conn.close()
+
+    def update_run_paths(self, run_id, input_file=None, output_dir=None):
+        """Update the input and output paths of a run in the database.
+        
+        Args:
+            run_id: The ID of the run to update
+            input_file: Relative path to the input file
+            output_dir: Relative path to the output directory
+        """
+        conn = self._connect()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE runs
+            SET input_file = ?, output_dir = ?
+            WHERE id = ?
+        """, (input_file, output_dir, run_id))
         conn.commit()
         conn.close()
 
@@ -116,6 +143,22 @@ class DatabaseManager:
         """Retrieve all runs from the database with their details."""
         conn = self._connect()
         cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, start_time, end_time, books_detected, output_dir, input_file
+            FROM runs
+            ORDER BY start_time DESC
+        """)
+        runs = cursor.fetchall()
+        conn.close()
+        
+        return [{
+            'run_id': row[0],
+            'start_time': row[1],
+            'end_time': row[2],
+            'books_detected': row[3],
+            'output_dir': row[4],
+            'input_file': row[5]
+        } for row in runs]
 
         cursor.execute("SELECT id, start_time, end_time, books_detected FROM runs")
         rows = cursor.fetchall()
