@@ -29,10 +29,11 @@ The script first detects images of book spines in a photo (or a video stream). I
 * A script uses a pragrmatic approach to get book titles in a specific language from OpenLibrary: we query common short words in a language; in the resulting list, we remove those where the language of the record does not match the language we are looking for. 
 * The meta data of books found like this is stored in a local DB. The book title list exported for SymSpell to use.
 
+## What am I currently working on
+* Developing a Web UI that shows the results from the run.
 
 ## What is not there yet
-* No lookup of book details using a books API.
-* No consolidation and presentation of results.
+-
 
 ## What doesn't work so well
 * Bounding boxes: 
@@ -52,7 +53,7 @@ The script first detects images of book spines in a photo (or a video stream). I
     * The book titles in the book titles dictionary could come from EDITIONS in OpenLibrary, as those titles would be localized. This is due to many entries in OL being stored in English by default, but then their EDITIONS contain the actual, localized title. We can extract this in the future - it's too complex for now.
 
 ## Next steps
-* Look up books using the cleaned text.
+* Look up book titles using a better source for German books. Or maybe only books that are more likely to be sold in Switzerland. We do get good titles sometimes, but then can't find those in the book title data set.
 
 We can always improve text area detection and OCR later on. For now, it's more important to implement the whole pipeline to validate the approach.
 
