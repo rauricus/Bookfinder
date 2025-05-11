@@ -159,17 +159,3 @@ class DatabaseManager:
             'output_dir': row[4],
             'input_file': row[5]
         } for row in runs]
-
-        cursor.execute("SELECT id, start_time, end_time, books_detected FROM runs")
-        rows = cursor.fetchall()
-        conn.close()
-
-        return [
-            {
-                "run_id": row[0],
-                "start_time": row[1],
-                "end_time": row[2],
-                "books_detected": row[3]
-            }
-            for row in rows
-        ]

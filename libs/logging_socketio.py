@@ -13,14 +13,16 @@ class LoggingSocketIO:
     _log_handler = None
 
     @classmethod
-    def initialize(cls, app):
-        """Initialisiert die Socket.IO-Instanz mit einer Flask-App."""
+    def initialize(cls, app, namespace='/default'):
+        """Initialisiert die Socket.IO-Instanz mit einer Flask-App und einem Namespace."""
         if not cls._instance:
             cls._instance = cls()
-            cls._socketio = SocketIO(app, async_mode='eventlet')
-            cls._log_handler = SocketIOLogHandler(cls._socketio)
-            cls._log_handler.setLevel('INFO')
+            cls._socketio = SocketIO(app, async_mode='eventlet', namespace=namespace)
+
+            cls._log_handler = SocketIOLogHandler(cls._socketio, namespace=namespace)
+            cls._log_handler.setLevel(logging.INFO)
             cls._log_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
 
     @classmethod
     def get_instance(cls):
@@ -42,6 +44,13 @@ class LoggingSocketIO:
         if not cls._log_handler:
             raise RuntimeError("LoggingSocketIO muss zuerst mit initialize() initialisiert werden")
         return cls._log_handler
+
+    @classmethod
+    def create_namespace(cls, namespace):
+        """Erstellt einen neuen Namespace für eine spezifische Run-ID."""
+        if not cls._socketio:
+            raise RuntimeError("LoggingSocketIO muss zuerst mit initialize() initialisiert werden")
+        return cls._socketio.namespace_handlers.get(namespace, None) or cls._socketio.on_namespace(namespace)
 
     def emit(self, event, data):
         """Sendet ein Event über Socket.IO."""

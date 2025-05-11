@@ -25,8 +25,9 @@ class BooksOnShelvesApp(Flask):
         # Initialize logging
         logging.basicConfig(level=logging.INFO)
         
-        # Initialize SocketIO as Singleton
-        LoggingSocketIO.initialize(self)
+        # Initialize SocketIO as Singleton with a namespace for the current run
+        run_namespace = '/run_default'  # This can later be dynamically set per run
+        LoggingSocketIO.initialize(self, namespace=run_namespace)
         
         # Initialize database manager as a singleton
         self.db_manager = DatabaseManager(os.path.join(os.getcwd(), "bookshelves.db"))

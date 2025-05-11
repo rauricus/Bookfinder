@@ -69,7 +69,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
     <script>
-        const socket = io();
+        const socket = io('/run_default'); // Explicitly connect to the correct namespace
         const logContainer = document.getElementById('log-container');
         const detectionsList = document.getElementById('detections-list');
         const logPlaceholder = document.getElementById('log-placeholder');
