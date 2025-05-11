@@ -26,31 +26,16 @@ TIMESTR_FORMAT = "%d.%m.%Y %H:%M"
 
 class BookFinder:
     
-    def __init__(self, debug=0, log_handler=None, db_manager=None):
+    def __init__(self, db_manager=None, debug=0):
         
+        self.db_manager = db_manager
         self.debug = debug
-        self.log_handler = log_handler
+        
         self.on_detection = None  # Callback für neue Detections
-
-        # Set debug level for logging
-        if self.debug >= 1:
-            logging.getLogger().setLevel(logging.DEBUG)
-
-        # Add the provided log handler, if any
-        if self.log_handler:
-            logging.getLogger().addHandler(self.log_handler)
-            logging.info("A handler has been added to the logger.")
 
         # Initialize all necessary modules
         initialize_libs()
 
-        # Initialize or use provided DatabaseManager
-        if db_manager:
-            self.db_manager = db_manager
-        else:
-            # Fallback: Create new DatabaseManager if none provided
-            self.DB_PATH = os.path.join(config.HOME_DIR, "bookshelves.db")
-            self.db_manager = DatabaseManager(self.DB_PATH)
 
         # Set default source
         # source_default = 'https://ultralytics.com/images/bus.jpg'

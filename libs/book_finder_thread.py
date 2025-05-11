@@ -3,7 +3,6 @@ import logging
 from flask import Flask
 
 from libs.book_finder import BookFinder
-from libs.logging_socketio import LoggingSocketIO
 
 
 class BookFinderThread(threading.Thread):
@@ -11,7 +10,7 @@ class BookFinderThread(threading.Thread):
     Ein Thread, der den BookFinder ausführt und das Logging über LoggingSocketIO handhabt.
     """
     
-    def __init__(self, app: Flask, source: str = None, db_manager = None):
+    def __init__(self, app: Flask, source: str = None, db_manager = None, debug: int = 0):
         """
         Initialisiert den BookFinderThread.
         
@@ -19,27 +18,23 @@ class BookFinderThread(threading.Thread):
             app (Flask): Die Flask-App
             source (str, optional): Der Pfad zum Bild oder Video
             db_manager (DatabaseManager, optional): Der DatabaseManager für die Datenbank-Operationen
+            debug (int, optional): Der Debug-Level
         """
         super().__init__()
         self.source = source
         self.db_manager = db_manager
+        self.debug = debug
         
-        # BookFinder mit dem SocketIO LogHandler und DatabaseManager initialisieren
+        # BookFinder mit dem DatabaseManager und Debug-Level initialisieren
         self.book_finder = BookFinder(
-            debug=0, 
-            log_handler=LoggingSocketIO.get_log_handler(), 
-            db_manager=self.db_manager
+            db_manager=self.db_manager,
+            debug=self.debug
         )
 
         # Callback für Detections registrieren
-        self.book_finder.on_detection = self.emit_detection
-        
-    def emit_detection(self, detection_data):
-        """
-        Sendet Detection-Daten über WebSocket an den Client.
-        """
-        LoggingSocketIO.get_instance().emit('detection', detection_data)
-        
+        # Pass the emit method from LoggingSocketIO to BookFinder for detections
+        self.book_finder.on_detection = lambda detection_data: app.logging_socketio.emit('detection', detection_data)
+
     def run(self):
         """
         Führt den BookFinder in einem separaten Thread aus.

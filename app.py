@@ -3,6 +3,7 @@ import logging
 import threading
 import eventlet
 import sqlite3
+import signal
 
 # Apply eventlet monkey-patching.
 #   Note this has to be done HERE, before importing any other modules. The module throws an
@@ -25,9 +26,9 @@ class BooksOnShelvesApp(Flask):
         # Initialize logging
         logging.basicConfig(level=logging.INFO)
         
-        # Initialize SocketIO as Singleton with a namespace for the current run
+        # Initialize logging
         run_namespace = '/run_default'  # This can later be dynamically set per run
-        LoggingSocketIO.initialize(self, namespace=run_namespace)
+        self.logging_socketio = LoggingSocketIO(self, namespace=run_namespace)
         
         # Initialize database manager as a singleton
         self.db_manager = DatabaseManager(os.path.join(os.getcwd(), "bookshelves.db"))
@@ -37,6 +38,9 @@ class BooksOnShelvesApp(Flask):
         self.route("/run", methods=['GET', 'POST'])(self.run_page)
         self.route("/runs")(self.get_runs)
         self.route("/runs/<run_id>/detections")(self.get_detections)
+
+        # Register the emit_detection callback for BookFinderThread
+        self.emit_detection_callback = self.emit_detection
 
     def index(self):
         return render_template("index.html")
@@ -52,7 +56,7 @@ class BooksOnShelvesApp(Flask):
 
             try:
                 # Starte BookFinder in einem separaten Thread
-                finder_thread = BookFinderThread(self, source, self.db_manager)
+                finder_thread = BookFinderThread(self, source, self.db_manager, debug=int(debug))
                 finder_thread.start()
                 
                 # Weiterleitung zur run.html, die die Live-Updates anzeigt
@@ -82,9 +86,23 @@ class BooksOnShelvesApp(Flask):
             logging.error(f"Fehler beim Abrufen der Detections: {str(e)}")
             return jsonify({"error": str(e)}), 500
 
+    def emit_detection(self, detection_data):
+        """Sends detection data via WebSocket using LoggingSocketIO."""
+        self.logging_socketio.emit('detection', detection_data)
+
+
+# Signal-Handler für SIGINT registrieren
+def handle_sigint(signal_received, frame):
+    """Handles SIGINT (Ctrl-C) to clean up resources."""
+    logging.info("SIGINT received. Cleaning up resources...")
+    flask_app.logging_socketio.teardown()
+    logging.info("Cleanup complete. Exiting.")
+    exit(0)
+
+signal.signal(signal.SIGINT, handle_sigint)
 
 # Create an instance of the BooksOnShelvesApp class and run the application
 if __name__ == '__main__':
     flask_app = BooksOnShelvesApp(__name__)
-    # Verwende die Singleton-Instanz von SocketIO
-    LoggingSocketIO.get_socketio().run(flask_app, host='0.0.0.0', port=5010)
+    # Verwende die `run_server`-Methode von LoggingSocketIO
+    flask_app.logging_socketio.run_server(flask_app, host='0.0.0.0', port=5010)
