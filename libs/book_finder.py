@@ -19,23 +19,20 @@ from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles, sel
 from libs.ocr_utils import ocr_onImage
 from libs.lookup_utils import lookup_book_details
 
-from libs.database_manager import DatabaseManager
-
 TIMESTR_FORMAT = "%d.%m.%Y %H:%M"
 
 
 class BookFinder:
     
-    def __init__(self, db_manager=None, debug=0):
+    def __init__(self, run, debug=0):
         
-        self.db_manager = db_manager
+        self.current_run = run
         self.debug = debug
         
         self.on_detection = None  # Callback für neue Detections
 
         # Initialize all necessary modules
         initialize_libs()
-
 
         # Set default source
         # source_default = 'https://ultralytics.com/images/bus.jpg'
@@ -53,9 +50,6 @@ class BookFinder:
 
         # Record the start time of the run
         start_time = datetime.now()
-
-        # Create a new run using the DatabaseManager
-        run = self.db_manager.create_run(start_time.isoformat())
 
         timeStr = start_time.strftime(TIMESTR_FORMAT)
         logging.info(f"=== Book detection starts at {timeStr} ===")
@@ -89,7 +83,7 @@ class BookFinder:
         rel_output = os.path.relpath(output_dir, config.HOME_DIR)
 
         # Update the run with the input and output paths
-        run.update_paths(input_file=rel_source, output_dir=rel_output)
+        self.current_run.update_paths(input_file=rel_source, output_dir=rel_output)
 
         # Get only filename with no directories and no extension
         filename = os.path.splitext(os.path.basename(source))[0]
@@ -106,9 +100,7 @@ class BookFinder:
             for result in results:
 
                 if len(result) > 0:
-                    
-                    logging.debug(result.to_json())  # Entferne file=text_file
-                
+                    logging.debug(result.to_json())
                     for idx, obb in enumerate(result.obb.xyxyxyxy):
 
                         # Check if the detection is of the "book" class
@@ -128,14 +120,10 @@ class BookFinder:
 
                             # Ensure the image is wider than tall and also return a variant rotated by 180 degrees.
                             img, img_rotated_180 = preprocess_for_text_area_detection(img_cropped)
-
-                            # Generate a unique detection ID for this detection within the run
-                            detection_id = f"{idx}"
-
-                            # Log the detection in the detections table
-                            detection_id = run.log_detection()
-
-                            # Calculate the image paths once
+                            # Log the detection
+                            detection_id = self.current_run.log_detection()
+                            
+                            # Save the original and rotated images
                             original_image_path = os.path.join(output_dir, "book", f"{filename}_{idx}.jpg")
                             rotated_image_path = os.path.join(output_dir, "book", f"{filename}_rotated-180_{idx}.jpg")
 
@@ -192,10 +180,8 @@ class BookFinder:
                                 book_details = lookup_book_details(best_title)
                                 if book_details:
                                     logging.info(f"📖 Gefundene Buchdetails: {book_details}")
-
-                                run.log_detection_variant(detection_id, variant_path, best_title)
-
-                                # Sende Detection-Event über den Callback
+                                # Logge die Variante und sende sie an den Callback
+                                self.current_run.log_detection_variant(detection_id, variant_path, best_title)
                                 if self.on_detection:
                                     detection_data = {
                                         'id': detection_id,
@@ -210,8 +196,8 @@ class BookFinder:
 
         # Record the end time of the run
         end_time = datetime.now()
-        # Update the run statistics in the database
-        run.update_statistics(end_time.isoformat(), books_detected)
-
+        # Update the run statistics and report end of detection run
+        self.current_run.update_statistics(end_time.isoformat(), books_detected)
+        
         timeStr = end_time.strftime(TIMESTR_FORMAT)
         logging.info(f"=== Book detection concludes at {timeStr}. #Books detected: {books_detected}. ===")

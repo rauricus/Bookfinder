@@ -1,6 +1,7 @@
 import threading
 import logging
 from flask import Flask
+from datetime import datetime
 
 from libs.book_finder import BookFinder
 
@@ -10,7 +11,7 @@ class BookFinderThread(threading.Thread):
     Ein Thread, der den BookFinder ausführt und das Logging über LoggingSocketIO handhabt.
     """
     
-    def __init__(self, app: Flask, source: str = None, db_manager = None, debug: int = 0):
+    def __init__(self, app: Flask, source: str = None, db_manager=None, debug: int = 0):
         """
         Initialisiert den BookFinderThread.
         
@@ -22,12 +23,14 @@ class BookFinderThread(threading.Thread):
         """
         super().__init__()
         self.source = source
-        self.db_manager = db_manager
         self.debug = debug
-        
-        # BookFinder mit dem DatabaseManager und Debug-Level initialisieren
+
+        # Erzeuge einen neuen RunContext über den DatabaseManager
+        self.run_context = db_manager.create_run(start_time=datetime.now().isoformat())
+
+        # BookFinder mit dem RunContext und Debug-Level initialisieren
         self.book_finder = BookFinder(
-            db_manager=self.db_manager,
+            current_run=self.run_context,
             debug=self.debug
         )
 

@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-class Run:
+class RunContext:
     def __init__(self, db_path, run_id):
         self.db_path = db_path
         self.run_id = run_id
@@ -127,7 +127,7 @@ class DatabaseManager:
         run_id = cursor.lastrowid
         conn.commit()
         conn.close()
-        return Run(self.db_path, run_id)
+        return RunContext(self.db_path, run_id)
 
     def log_run_start(self, start_time, input_file=None, output_dir=None):
         """
