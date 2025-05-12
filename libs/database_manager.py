@@ -1,6 +1,70 @@
 import sqlite3
 from datetime import datetime
 
+class Run:
+    def __init__(self, db_path, run_id):
+        self.db_path = db_path
+        self.run_id = run_id
+
+    def _connect(self):
+        return sqlite3.connect(self.db_path)
+
+    def update_statistics(self, end_time, books_detected):
+        conn = self._connect()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE runs
+            SET end_time = ?, books_detected = ?
+            WHERE id = ?
+            """,
+            (end_time, books_detected, self.run_id),
+        )
+        conn.commit()
+        conn.close()
+
+    def update_paths(self, input_file=None, output_dir=None):
+        conn = self._connect()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE runs
+            SET input_file = ?, output_dir = ?
+            WHERE id = ?
+            """,
+            (input_file, output_dir, self.run_id),
+        )
+        conn.commit()
+        conn.close()
+
+    def log_detection(self):
+        conn = self._connect()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO detections (run_id)
+            VALUES (?)
+            """,
+            (self.run_id,),
+        )
+        detection_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return detection_id
+
+    def log_detection_variant(self, detection_id, image_path, best_title):
+        conn = self._connect()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO detection_variants (detection_id, image_path, best_title)
+            VALUES (?, ?, ?)
+            """,
+            (detection_id, image_path, best_title),
+        )
+        conn.commit()
+        conn.close()
+
 class DatabaseManager:
     def __init__(self, db_path):
         self.db_path = db_path
@@ -50,6 +114,21 @@ class DatabaseManager:
         conn.commit()
         conn.close()
 
+    def create_run(self, start_time, input_file=None, output_dir=None):
+        conn = self._connect()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO runs (start_time, input_file, output_dir)
+            VALUES (?, ?, ?)
+            """,
+            (start_time, input_file, output_dir),
+        )
+        run_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return Run(self.db_path, run_id)
+
     def log_run_start(self, start_time, input_file=None, output_dir=None):
         """
         Log the start of a run into the database and return the run ID.
@@ -69,60 +148,6 @@ class DatabaseManager:
         conn.commit()
         conn.close()
         return run_id
-
-    def update_run_statistics(self, run_id, end_time, books_detected):
-        """Update the statistics of a run in the database."""
-        conn = self._connect()
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE runs
-            SET end_time = ?, books_detected = ?
-            WHERE id = ?
-        """, (end_time, books_detected, run_id))
-        conn.commit()
-        conn.close()
-
-    def update_run_paths(self, run_id, input_file=None, output_dir=None):
-        """Update the input and output paths of a run in the database.
-        
-        Args:
-            run_id: The ID of the run to update
-            input_file: Relative path to the input file
-            output_dir: Relative path to the output directory
-        """
-        conn = self._connect()
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE runs
-            SET input_file = ?, output_dir = ?
-            WHERE id = ?
-        """, (input_file, output_dir, run_id))
-        conn.commit()
-        conn.close()
-
-    def log_detection_entry(self, run_id):
-        """Log a detected item into the detections table and return its ID."""
-        conn = self._connect()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO detections (run_id)
-            VALUES (?)
-        """, (run_id,))
-        detection_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
-        return detection_id
-
-    def log_detection_variant(self, detection_id, image_path, best_title):
-        """Log a variant of a detection into the detection_variants table."""
-        conn = self._connect()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO detection_variants (detection_id, image_path, best_title)
-            VALUES (?, ?, ?)
-        """, (detection_id, image_path, best_title))
-        conn.commit()
-        conn.close()
 
     def get_detections(self, run_id=None):
         """Retrieve detections from the database, optionally filtered by run_id."""

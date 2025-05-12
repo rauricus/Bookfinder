@@ -49,19 +49,13 @@ class BookFinder:
         """
         Execute the book detection and lookup process.
         """
-        run_id = None
-        books_detected = 0
-
-        # Use default source if not provided
         source = source or self.source_default
 
         # Record the start time of the run
         start_time = datetime.now()
 
-        # Log the run start
-        run_id = self.db_manager.log_run_start(
-            start_time.isoformat()
-        )
+        # Create a new run using the DatabaseManager
+        run = self.db_manager.create_run(start_time.isoformat())
 
         timeStr = start_time.strftime(TIMESTR_FORMAT)
         logging.info(f"=== Book detection starts at {timeStr} ===")
@@ -95,11 +89,7 @@ class BookFinder:
         rel_output = os.path.relpath(output_dir, config.HOME_DIR)
 
         # Update the run with the input and output paths
-        self.db_manager.update_run_paths(
-            run_id,
-            input_file=rel_source,
-            output_dir=rel_output
-        )
+        run.update_paths(input_file=rel_source, output_dir=rel_output)
 
         # Get only filename with no directories and no extension
         filename = os.path.splitext(os.path.basename(source))[0]
@@ -109,6 +99,7 @@ class BookFinder:
         east_model_path = os.path.join(config.MODEL_DIR, "east_text_detection.pb")
         east_model = cv2.dnn.readNet(east_model_path)
 
+        books_detected = 0
         with open(os.path.join(output_dir, "results.json"), "w") as text_file:
 
             # Process results
@@ -142,7 +133,7 @@ class BookFinder:
                             detection_id = f"{idx}"
 
                             # Log the detection in the detections table
-                            detection_id = self.db_manager.log_detection_entry(run_id)
+                            detection_id = run.log_detection()
 
                             # Calculate the image paths once
                             original_image_path = os.path.join(output_dir, "book", f"{filename}_{idx}.jpg")
@@ -202,8 +193,7 @@ class BookFinder:
                                 if book_details:
                                     logging.info(f"📖 Gefundene Buchdetails: {book_details}")
 
-                                # Log the title we've associated with this variant.
-                                self.db_manager.log_detection_variant(detection_id, variant_path, best_title)
+                                run.log_detection_variant(detection_id, variant_path, best_title)
 
                                 # Sende Detection-Event über den Callback
                                 if self.on_detection:
@@ -221,7 +211,7 @@ class BookFinder:
         # Record the end time of the run
         end_time = datetime.now()
         # Update the run statistics in the database
-        self.db_manager.update_run_statistics(run_id, end_time.isoformat(), books_detected)
+        run.update_statistics(end_time.isoformat(), books_detected)
 
         timeStr = end_time.strftime(TIMESTR_FORMAT)
         logging.info(f"=== Book detection concludes at {timeStr}. #Books detected: {books_detected}. ===")
