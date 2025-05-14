@@ -1,7 +1,10 @@
-from libs.general_utils import iso639_1_to_3
+
 import requests
 import xml.etree.ElementTree as ET
-from libs.log_context import get_logger
+
+from libs.utils.general_utils import iso639_1_to_3
+from libs.logging.log_context import get_logger
+
 
 # Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
 logger = get_logger(__name__)

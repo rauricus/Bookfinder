@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 import xml.etree.ElementTree as ET
 
-from libs.lookup_utils import search_openlibrary, search_dnb, lookup_book_details
+from libs.utils.lookup_utils import search_openlibrary, search_dnb, lookup_book_details
 
 class TestLookupUtils(unittest.TestCase):
     @patch('libs.lookup_utils.requests.get')

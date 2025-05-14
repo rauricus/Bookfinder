@@ -12,12 +12,12 @@ from ultralytics import YOLO
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'libs'))
 
 from libs import initialize as initialize_libs
-from libs.general_utils import get_next_directory
-from libs.image_utils import preprocess_for_text_area_detection, extractAndRotateImage
-from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles, select_best_title, compute_validity_score
-from libs.ocr_utils import ocr_onImage
-from libs.lookup_utils import lookup_book_details
-from libs.log_context import get_logger
+from libs.utils.general_utils import get_next_directory
+from libs.utils.image_utils import preprocess_for_text_area_detection, extractAndRotateImage
+from libs.utils.text_utils import clean_ocr_text, match_to_words, match_to_titles, select_best_title, compute_validity_score
+from libs.utils.ocr_utils import ocr_onImage
+from libs.utils.lookup_utils import lookup_book_details
+from libs.logging.log_context import get_logger
 
 # Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
 logger = get_logger(__name__)

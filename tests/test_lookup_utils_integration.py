@@ -1,5 +1,5 @@
 import unittest
-from libs.lookup_utils import search_openlibrary, search_lobid_gnd_work, search_dnb
+from libs.utils.lookup_utils import search_openlibrary, search_lobid_gnd_work, search_dnb
 
 class TestLookupUtilsIntegration(unittest.TestCase):
 

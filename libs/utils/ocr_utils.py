@@ -2,10 +2,10 @@ from PIL import Image
 
 import cv2
 import numpy as np
-from libs.log_context import get_logger
 
-from libs.image_utils import cropImage, preprocess_for_ocr
-from libs.text_utils import clean_ocr_text
+from libs.logging.log_context import get_logger
+from libs.utils.image_utils import cropImage, preprocess_for_ocr
+from libs.utils.text_utils import clean_ocr_text
 
 import pytesseract
 

@@ -16,10 +16,14 @@ from datetime import datetime
 eventlet.monkey_patch()
 
 from flask import Flask, request, render_template, jsonify, redirect
-from libs.book_finder_thread import BookFinderThread
+
+
+from libs.logging.logging_socketio import LoggingSocketIO
+from libs.utils.general_utils import get_next_directory
+
 from libs.database_manager import DatabaseManager
-from libs.logging_socketio import LoggingSocketIO
-from libs.general_utils import get_next_directory
+from libs.book_finder_thread import BookFinderThread
+
 import config
 
 

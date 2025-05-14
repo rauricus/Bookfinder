@@ -2,8 +2,8 @@ import logging
 import eventlet
 import os
 from flask_socketio import SocketIO
-from libs.socketio_log_handler import SocketIOLogHandler
-from libs.log_context import LogFilter
+from .socketio_log_handler import SocketIOLogHandler
+from .log_context import LogFilter
 
 class LoggingSocketIO:
     """

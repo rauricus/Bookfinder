@@ -1,6 +1,7 @@
 import os
 import config
-from libs.log_context import get_logger
+
+from libs.logging.log_context import get_logger
 
 # Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
 logger = get_logger(__name__)

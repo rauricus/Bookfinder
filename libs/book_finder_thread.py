@@ -3,7 +3,7 @@ from flask import Flask
 from datetime import datetime
 
 from libs.book_finder import BookFinder
-from libs.log_context import RunLogContext, get_logger
+from libs.logging.log_context import RunLogContext, get_logger
 
 # Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
 logger = get_logger(__name__)
