@@ -1,7 +1,6 @@
 import os
 import sys
 import argparse
-import logging
 from datetime import datetime
 
 import config  # Do this here to ensure logging is configured early
@@ -18,6 +17,10 @@ from libs.image_utils import preprocess_for_text_area_detection, extractAndRotat
 from libs.text_utils import clean_ocr_text, match_to_words, match_to_titles, select_best_title, compute_validity_score
 from libs.ocr_utils import ocr_onImage
 from libs.lookup_utils import lookup_book_details
+from libs.log_context import get_logger
+
+# Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
+logger = get_logger(__name__)
 
 TIMESTR_FORMAT = "%d.%m.%Y %H:%M"
 
@@ -52,7 +55,7 @@ class BookFinder:
         start_time = datetime.now()
 
         timeStr = start_time.strftime(TIMESTR_FORMAT)
-        logging.info(f"=== Book detection starts at {timeStr} ===")
+        logger.info(f"=== Book detection starts at {timeStr} ===")
 
         # --- Detectbook spines in image ---
 
@@ -89,7 +92,7 @@ class BookFinder:
         filename = os.path.splitext(os.path.basename(source))[0]
 
         # Load the pre-trained EAST model
-        logging.debug("Loading EAST text detector...")
+        logger.debug("Loading EAST text detector...")
         east_model_path = os.path.join(config.MODEL_DIR, "east_text_detection.pb")
         east_model = cv2.dnn.readNet(east_model_path)
 
@@ -100,14 +103,14 @@ class BookFinder:
             for result in results:
 
                 if len(result) > 0:
-                    logging.debug(result.to_json())
+                    logger.debug(result.to_json())
                     for idx, obb in enumerate(result.obb.xyxyxyxy):
 
                         # Check if the detection is of the "book" class
                         if "book" in result.names.values():
                             books_detected += 1
 
-                            logging.info(f"Book {idx} found")
+                            logger.info(f"Book {idx} found")
 
                             # --- Extract and pre-process the detected book spine images ---
 
@@ -142,7 +145,7 @@ class BookFinder:
                             # Iterate over each variant, process the OCR, and print the result
                             for variant_img, variant_path in image_variants:
 
-                                logging.info(f"{variant_path} ->")
+                                logger.info(f"{variant_path} ->")
 
                                 detected_texts = ocr_onImage(variant_img, east_model, self.debug)
 
@@ -156,7 +159,7 @@ class BookFinder:
                                     # Step 2: Compute validity AFTER correction
                                     corrected_validity_score = compute_validity_score(corrected_text)
 
-                                    logging.debug(f"    {region}: '{cleaned_text}' -> '{corrected_text}' (Bewertung: {corrected_validity_score:.2f} [ignored])")
+                                    logger.debug(f"    {region}: '{cleaned_text}' -> '{corrected_text}' (Bewertung: {corrected_validity_score:.2f} [ignored])")
 
                                     valid_text_regions[region] = corrected_text
 
@@ -164,22 +167,22 @@ class BookFinder:
                                     #if corrected_validity_score > 0.3:  # Threshold (adjust as needed)
                                     #    valid_text_regions[region] = corrected_text
                                     #else:
-                                    #    logging.info(f"    ❌ Discarding low-confidence OCR result {cleaned_text}.")
+                                    #    logger.info(f"    ❌ Discarding low-confidence OCR result {cleaned_text}.")
 
 
                                 corrected_text = ' '.join(valid_text_regions.values()).strip()
-                                logging.debug(f"    corrected title: {corrected_text}")
+                                logger.debug(f"    corrected title: {corrected_text}")
 
                                 matched_title = match_to_titles(corrected_text)
-                                logging.debug(f"    matched title: {matched_title}")
+                                logger.debug(f"    matched title: {matched_title}")
 
                                 best_title = select_best_title(corrected_text, matched_title)
-                                logging.info(f"📚 Best title: {best_title}")
+                                logger.info(f"📚 Best title: {best_title}")
 
                                 # Buchdetails abrufen
                                 book_details = lookup_book_details(best_title)
                                 if book_details:
-                                    logging.info(f"📖 Gefundene Buchdetails: {book_details}")
+                                    logger.info(f"📖 Gefundene Buchdetails: {book_details}")
                                 # Logge die Variante und sende sie an den Callback
                                 self.current_run.log_detection_variant(detection_id, variant_path, best_title)
                                 if self.on_detection:
@@ -192,7 +195,7 @@ class BookFinder:
                                     self.on_detection(detection_data)
 
                         else:
-                            logging.info("Skipping ", result.names[idx], '...')
+                            logger.info("Skipping ", result.names[idx], '...')
 
         # Record the end time of the run
         end_time = datetime.now()
@@ -200,4 +203,4 @@ class BookFinder:
         self.current_run.update_statistics(end_time.isoformat(), books_detected)
         
         timeStr = end_time.strftime(TIMESTR_FORMAT)
-        logging.info(f"=== Book detection concludes at {timeStr}. #Books detected: {books_detected}. ===")
+        logger.info(f"=== Book detection concludes at {timeStr}. #Books detected: {books_detected}. ===")

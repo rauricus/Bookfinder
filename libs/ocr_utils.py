@@ -2,7 +2,7 @@ from PIL import Image
 
 import cv2
 import numpy as np
-import logging
+from libs.log_context import get_logger
 
 from libs.image_utils import cropImage, preprocess_for_ocr
 from libs.text_utils import clean_ocr_text
@@ -10,6 +10,9 @@ from libs.text_utils import clean_ocr_text
 import pytesseract
 
 import config
+
+# Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
+logger = get_logger(__name__)
 
 def initialize():
     # Add any necessary initialization code here
@@ -52,8 +55,9 @@ def ocr_onImage(image, east_model, debug=0):
 
             key = cv2.waitKey(0)
             cv2.destroyAllWindows()
+
             if key == 27:  # ESC key
-                logging.warning("ESC key pressed. Aborting execution.")
+                logger.warning("ESC key pressed. Aborting execution.")
                 return {}
 
         # Perform OCR on the corrected region
@@ -248,7 +252,7 @@ def showBoundingBoxes(image, boxes):
 
     # Check if vertices are empty
     if boxes is None or len(boxes) == 0:
-        logging.debug("No bounding boxes to display.")
+        logger.debug("No bounding boxes to display.")
         return
     
     # Show bounding boxes
@@ -267,7 +271,8 @@ def showBoundingBoxes(image, boxes):
     cv2.imshow("Bounding boxes", image)
     key = cv2.waitKey(0)
     cv2.destroyAllWindows()
+
     if key == 27:  # ESC key
-        logging.warning("ESC key pressed. Aborting execution.")
+        logger.warning("ESC key pressed. Aborting execution.")
         return
 

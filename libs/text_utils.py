@@ -1,12 +1,15 @@
 import re
 import os
 import unicodedata
-import logging
 
 from symspellpy import SymSpell, Verbosity
 from Levenshtein import distance as levenshtein_distance
 
 import config
+from libs.log_context import get_logger
+
+# Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
+logger = get_logger(__name__)
 
 # Unicode-Zeichenbereiche für verschiedene Sprachen
 LANGUAGE_RANGES = {
@@ -20,7 +23,7 @@ def load_symspell(dictionary_path, max_edit_distance=2, separator=" "):
     sym_spell = SymSpell(max_dictionary_edit_distance=max_edit_distance, prefix_length=7)
 
     if not sym_spell.load_dictionary(dictionary_path, term_index=0, count_index=1, separator=separator):
-        logging.error(f"❌ Failed to load dictionary: {dictionary_path}")
+        logger.error(f"❌ Failed to load dictionary: {dictionary_path}")
         return None
     
     return sym_spell
@@ -39,9 +42,9 @@ def initialize():
 
     for lang, sym_spell in WORD_DICTS.items():
         if sym_spell:
-            logging.info(f"✅ Loaded {len(sym_spell.words)} words for '{lang}'")
+            logger.info(f"✅ Loaded {len(sym_spell.words)} words for '{lang}'")
         else:
-            logging.error(f"❌ Failed to load words dictionary for '{lang}'")
+            logger.error(f"❌ Failed to load words dictionary for '{lang}'")
 
     # Load author name dictionaries
     name_dict_paths = {
@@ -51,9 +54,9 @@ def initialize():
 
     for lang, sym_spell in NAME_DICTS.items():
         if sym_spell:
-            logging.info(f"✅ Loaded {len(sym_spell.words)} names for '{lang}'")
+            logger.info(f"✅ Loaded {len(sym_spell.words)} names for '{lang}'")
         else:
-            logging.error(f"❌ Failed to load name dictionary for '{lang}'")
+            logger.error(f"❌ Failed to load name dictionary for '{lang}'")
 
 
     # Load book title dictionaries
@@ -64,9 +67,9 @@ def initialize():
 
     for lang, sym_spell in BOOKTITLE_DICTS.items():
         if sym_spell:
-            logging.info(f"✅ Loaded {len(sym_spell.words)} book titles for '{lang}'")
+            logger.info(f"✅ Loaded {len(sym_spell.words)} book titles for '{lang}'")
         else:
-            logging.error(f"❌ Failed to load book title dictionary for '{lang}'")
+            logger.error(f"❌ Failed to load book title dictionary for '{lang}'")
 
 
 def get_language_charset(languages):
@@ -76,7 +79,7 @@ def get_language_charset(languages):
         if lang in LANGUAGE_RANGES:
             allowed_chars.update(LANGUAGE_RANGES[lang])
         else:
-            logging.warning(f"⚠ Sprache {lang} nicht bekannt, wird ignoriert.")
+            logger.warning(f"⚠ Sprache {lang} nicht bekannt, wird ignoriert.")
     return "".join(allowed_chars)
 
 
@@ -158,7 +161,7 @@ def match_to_words(text, lang="de"):
 def match_to_titles(text, lang="de"):
     """Korrigiert text speziell gegen eine Buchtitelliste."""
     if lang not in BOOKTITLE_DICTS or not BOOKTITLE_DICTS[lang]:
-        logging.warning(f"⚠ Kein SymSpell-Wörterbuch für Sprache '{lang}' gefunden.")
+        logger.warning(f"⚠ Kein SymSpell-Wörterbuch für Sprache '{lang}' gefunden.")
         return text  # Ohne Korrektur zurückgeben, wenn kein Wörterbuch verfügbar ist
 
     suggestions = BOOKTITLE_DICTS[lang].lookup_compound(text, max_edit_distance=2)
@@ -167,7 +170,7 @@ def match_to_titles(text, lang="de"):
         corrected_text = suggestions[0].term
         return corrected_text
     else:
-        logging.info(f"⚠ Keine Korrektur für: '{text}' gefunden.")
+        logger.info(f"⚠ Keine Korrektur für: '{text}' gefunden.")
         return text  # Keine Korrektur gefunden
     
 

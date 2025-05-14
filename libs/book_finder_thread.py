@@ -1,10 +1,12 @@
 import threading
-import logging
 from flask import Flask
 from datetime import datetime
 
 from libs.book_finder import BookFinder
+from libs.log_context import RunLogContext, get_logger
 
+# Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
+logger = get_logger(__name__)
 
 class BookFinderThread(threading.Thread):
     """
@@ -35,17 +37,18 @@ class BookFinderThread(threading.Thread):
         )
 
         # Callback für Detections registrieren
-        # Pass the emit method from LoggingSocketIO to BookFinder for detections
         self.book_finder.on_detection = lambda detection_data: app.logging_socketio.emit_detection(self.run_context, detection_data)
 
     def run(self):
         """
         Führt den BookFinder in einem separaten Thread aus.
         """
-        try:
-            logging.info("🔍 Starte Bucherkennung...")
-            self.book_finder.findBooks(self.source)
-            logging.info("✅ Bucherkennung abgeschlossen")
-        except Exception as e:
-            logging.error(f"❌ Fehler bei der Bucherkennung: {str(e)}")
-            raise
+        # Verwende den RunLogContext für alle Logging-Aufrufe in diesem Thread
+        with RunLogContext(self.run_context.run_id):
+            try:
+                logger.info("🔍 Starte Bucherkennung...")
+                self.book_finder.findBooks(self.source)
+                logger.info("✅ Bucherkennung abgeschlossen")
+            except Exception as e:
+                logger.error(f"❌ Fehler bei der Bucherkennung: {str(e)}")
+                raise

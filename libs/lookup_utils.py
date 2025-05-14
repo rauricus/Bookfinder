@@ -1,7 +1,10 @@
 from libs.general_utils import iso639_1_to_3
 import requests
 import xml.etree.ElementTree as ET
-import logging
+from libs.log_context import get_logger
+
+# Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
+logger = get_logger(__name__)
 
 def initialize():
     # Add any necessary initialization code here
@@ -10,10 +13,10 @@ def initialize():
     
 def search_dnb(query_string, language="de"):
     if not query_string:
-        logging.info("Kein Titel angegeben. Überspringe Lookup in DNB.")
+        logger.info("Kein Titel angegeben. Überspringe Lookup in DNB.")
         return None
 
-    logging.info("🔎 Suche mit DNB (SRU)...")
+    logger.info("🔎 Suche mit DNB (SRU)...")
 
     try:
         dnb_url = "https://services.dnb.de/sru/dnb"
@@ -39,7 +42,7 @@ def search_dnb(query_string, language="de"):
         isbn_el = root.find('.//bibo:isbn13', ns)
 
         if all(el is None for el in [title_el, author_el, year_el, isbn_el]):
-            logging.info(f"⚠️ Kein Buch gefunden für Query: {query_string}")
+            logger.info(f"⚠️ Kein Buch gefunden für Query: {query_string}")
             return None
 
         return {
@@ -50,7 +53,7 @@ def search_dnb(query_string, language="de"):
         }
 
     except Exception as e:
-        logging.error(f"❌ Fehler bei DNB-Anfrage: {e}")
+        logger.error(f"❌ Fehler bei DNB-Anfrage: {e}")
         return None
     
     
@@ -69,10 +72,10 @@ def search_openlibrary(query_string, language="de"):
     """
 
     if not query_string:  # Überprüfen, ob der Titel leer oder None ist
-        logging.info("Kein Titel angegeben. Überspringe Lookup in OpernLibrary.")
+        logger.info("Kein Titel angegeben. Überspringe Lookup in OpernLibrary.")
         return None
     
-    logging.info("🔎 Suche mit OpenLibrary...")
+    logger.info("🔎 Suche mit OpenLibrary...")
 
     base_url = "https://openlibrary.org/search.json"
     params = {
@@ -95,21 +98,21 @@ def search_openlibrary(query_string, language="de"):
                 "isbn": book.get("isbn", ["Unbekannt"])[0] if "isbn" in book else "Unbekannt"
             }
         else:
-            logging.info(f"⚠️ Kein Buch gefunden für Query: {query_string}")
+            logger.info(f"⚠️ Kein Buch gefunden für Query: {query_string}")
             return None
 
     except requests.RequestException as e:
-        logging.error(f"❌ Fehler bei OpenLibrary-Anfrage: {e}")
+        logger.error(f"❌ Fehler bei OpenLibrary-Anfrage: {e}")
         return None
 
 
 def search_lobid_gnd_work(query_string):
     
     if not query_string:
-        logging.info("Kein Titel angegeben. Überspringe Lookup in lobid-GND.")
+        logger.info("Kein Titel angegeben. Überspringe Lookup in lobid-GND.")
         return None
 
-    logging.info("🔎 Suche mit lobid GND (Work)...")
+    logger.info("🔎 Suche mit lobid GND (Work)...")
 
     try:
         base_url = "https://lobid.org/gnd/search"
@@ -139,18 +142,18 @@ def search_lobid_gnd_work(query_string):
                 "wikidata": wikidata_link or "Unbekannt"
             }
         else:
-            logging.info(f"⚠️ Kein Buch gefunden für Query: {query_string}")
+            logger.info(f"⚠️ Kein Buch gefunden für Query: {query_string}")
             return None
 
     except Exception as e:
-        logging.error(f"❌ Fehler bei lobid-GND-Anfrage: {e}")
+        logger.error(f"❌ Fehler bei lobid-GND-Anfrage: {e}")
         return None
 
 
 def lookup_book_details(query_string, language="de"):
     
     if not query_string:
-        logging.info("Kein Titel angegeben. Überspringe Lookup.")
+        logger.info("Kein Titel angegeben. Überspringe Lookup.")
         return None
 
     # Zuerst DNB SRU versuchen
@@ -159,11 +162,11 @@ def lookup_book_details(query_string, language="de"):
         return result
 
     # Fallback: OpenLibrary
-    logging.info("🔄 Fallback: Suche mit OpenLibrary...")
+    logger.info("🔄 Fallback: Suche mit OpenLibrary...")
     result = search_openlibrary(query_string, language)
     if result:
         return result
 
     # Optional: lobid GND ergänzend (Normdaten)
-    logging.info("🔄 Zusatzversuch mit lobid GND (Normdaten)...")
+    logger.info("🔄 Zusatzversuch mit lobid GND (Normdaten)...")
     return search_lobid_gnd_work(query_string)
