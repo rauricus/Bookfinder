@@ -5,6 +5,7 @@ import eventlet
 import sqlite3
 import signal
 import sys
+from datetime import datetime
 
 # Apply eventlet monkey-patching.
 #   Note this has to be done HERE, before importing any other modules. The module throws an
@@ -18,6 +19,8 @@ from flask import Flask, request, render_template, jsonify, redirect
 from libs.book_finder_thread import BookFinderThread
 from libs.database_manager import DatabaseManager
 from libs.logging_socketio import LoggingSocketIO
+from libs.general_utils import get_next_directory
+import config
 
 
 class BooksOnShelvesApp(Flask):
@@ -37,8 +40,20 @@ class BooksOnShelvesApp(Flask):
         self.route("/runs")(self.get_runs)
         self.route("/runs/<run_id>/detections")(self.get_detections)
 
+        # Thread-Lock für die Output Directory Erstellung
+        self._output_dir_lock = threading.Lock()
+
+    def __get_next_output_directory(self):
+        """Thread-safe Methode zur Erstellung des nächsten Output Directories."""
+        with self._output_dir_lock:
+            output_dir = get_next_directory(config.OUTPUT_DIR)
+            os.makedirs(os.path.join(output_dir, "book"), exist_ok=True)
+            return output_dir
+
+
     def index(self):
         return render_template("index.html")
+
 
     def run_page(self):
         if request.method == 'POST':
@@ -50,12 +65,19 @@ class BooksOnShelvesApp(Flask):
                 return jsonify({"error": "Keine Quelle angegeben"}), 400
 
             try:
+                output_dir = self.__get_next_output_directory()
+                
+                # Create run context with output directory
+                run_context = self.db_manager.create_run(
+                    start_time=datetime.now().isoformat(),
+                )
+                
                 # Start BookFinder in new thread
-                finder_thread = BookFinderThread(self, source, self.db_manager, debug=int(debug))
+                finder_thread = BookFinderThread(self, source=source, output_dir=output_dir, run_context=run_context, debug=int(debug))
                 
                 # Register new namespace for logging output of the thread
                 run_id = finder_thread.run_context.run_id
-                self.logging_socketio.register_namespace(run_id)
+                self.logging_socketio.register_namespace(run_id, output_dir)
                 
                 finder_thread.start()
 

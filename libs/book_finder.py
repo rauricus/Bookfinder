@@ -27,9 +27,10 @@ TIMESTR_FORMAT = "%d.%m.%Y %H:%M"
 
 class BookFinder:
     
-    def __init__(self, run, debug=0):
+    def __init__(self, run, output_dir, debug=0):
         
         self.current_run = run
+        self.output_dir = output_dir
         self.debug = debug
         
         self.on_detection = None  # Callback für neue Detections
@@ -71,10 +72,6 @@ class BookFinder:
 
         # --- Process and store book spine images ---
 
-        # Create the output directory, if needed
-        output_dir = get_next_directory(config.OUTPUT_DIR)
-        os.makedirs(os.path.join(output_dir, "book"), exist_ok=True)
-
         # Convert source to relative path if it's a local file        
         rel_source = None
         if os.path.isfile(source):
@@ -83,7 +80,7 @@ class BookFinder:
             except ValueError:
                 # Falls der Pfad auf einem anderen Laufwerk liegt oder ein URL ist
                 rel_source = source
-        rel_output = os.path.relpath(output_dir, config.HOME_DIR)
+        rel_output = os.path.relpath(self.output_dir, config.HOME_DIR)
 
         # Update the run with the input and output paths
         self.current_run.update_paths(input_file=rel_source, output_dir=rel_output)
@@ -97,7 +94,7 @@ class BookFinder:
         east_model = cv2.dnn.readNet(east_model_path)
 
         books_detected = 0
-        with open(os.path.join(output_dir, "results.json"), "w") as text_file:
+        with open(os.path.join(self.output_dir, "results.json"), "w") as text_file:
 
             # Process results
             for result in results:
@@ -127,8 +124,8 @@ class BookFinder:
                             detection_id = self.current_run.log_detection()
                             
                             # Save the original and rotated images
-                            original_image_path = os.path.join(output_dir, "book", f"{filename}_{idx}.jpg")
-                            rotated_image_path = os.path.join(output_dir, "book", f"{filename}_rotated-180_{idx}.jpg")
+                            original_image_path = os.path.join(self.output_dir, "book", f"{filename}_{idx}.jpg")
+                            rotated_image_path = os.path.join(self.output_dir, "book", f"{filename}_rotated-180_{idx}.jpg")
 
                             cv2.imwrite(original_image_path, img)
                             cv2.imwrite(rotated_image_path, img_rotated_180)
