@@ -8,40 +8,53 @@ class LoggingSocketIO:
     """
     A class for managing Socket.IO logging.
     """
-    def __init__(self, app, namespace='/default'):
-        """Initializes the Socket.IO instance with a Flask app and a namespace."""
-        self._socketio = SocketIO(app, async_mode='eventlet', namespace=namespace)
+    def __init__(self, app):
+        """Initializes the Socket.IO instance with a Flask app and a default namespace."""
+        self._socketio = SocketIO(app, async_mode='eventlet')
+        self._handlers = {}
+        self._default_namespace = '/default'
+
+        # Create a default handler for app logs
+        self._ensure_handler_exists(self._default_namespace)
         
-        self._log_handler = SocketIOLogHandler(self._socketio, namespace=namespace)
-        self._log_handler.setLevel(logging.INFO)
-        self._log_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        logging.getLogger().addHandler(self._log_handler)
+    def _ensure_handler_exists(self, namespace):
+        """ Creates a SocketIOLogHandler for the specified namespace, if needed."""
+        if namespace not in self._handlers:
+            handler = SocketIOLogHandler(self._socketio, namespace=namespace)
+            
+            handler.setLevel(logging.INFO)
+            handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+            
+            self._handlers[namespace] = handler
+            logging.getLogger().addHandler(handler)
+            
 
     def teardown(self):
         """Cleans up resources, such as removing the log handler."""
-        logging.getLogger().removeHandler(self._log_handler)
-        self._log_handler = None
+        for handler in self._handlers.values():
+            logging.getLogger().removeHandler(handler)
+        self._handlers = {}
         self._socketio = None
         
+    def register_namespace(self, run_id):
+        """Registriert einen LogHandler für einen Run-Namespace."""
+        namespace = f'/run_{run_id}'
+        self._ensure_handler_exists(namespace)
+
+    def deregister_namespace(self, run_id):
+        """Entfernt den LogHandler für einen Run-Namespace."""
+        namespace = f'/run_{run_id}'
+        handler = self._handlers.pop(namespace, None)
+        if handler:
+            logging.getLogger().removeHandler(handler)
+            
+    def emit_detection(self, run, detection):
+        """Logs a detection of a specific run."""
+        run_namespace = f'/run_{run.run_id}'
+        self._ensure_handler_exists(run_namespace)
+        self._socketio.emit('detection', detection, namespace=run_namespace)
         
     def run_server(self, app, host='0.0.0.0', port=5010):
         """Starts the Socket.IO server."""
         self._socketio.run(app, host=host, port=port)
-
-    def emit_log_message(self, message):
-        """Emits a log message to the current namespace."""
-        self._socketio.emit('log_message', {'data': message}, namespace=self._log_handler.namespace)
-
-    def emit(self, event, data, namespace=None):
-        """Sendet ein Event über Socket.IO."""
-        if namespace is None:
-            namespace = self._log_handler.namespace
-        self._socketio.emit(event, data, namespace=namespace)
-
-
-
-    def test_socket(self):
-        """Sendet eine Test-Nachricht über Socket.IO."""
-        self.emit('log_message', {'data': 'Test message from server'})
-        return "Test message sent to WebSocket. Check the browser console.", 200
 

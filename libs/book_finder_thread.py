@@ -30,13 +30,13 @@ class BookFinderThread(threading.Thread):
 
         # BookFinder mit dem RunContext und Debug-Level initialisieren
         self.book_finder = BookFinder(
-            current_run=self.run_context,
+            run=self.run_context,
             debug=self.debug
         )
 
         # Callback für Detections registrieren
         # Pass the emit method from LoggingSocketIO to BookFinder for detections
-        self.book_finder.on_detection = lambda detection_data: app.logging_socketio.emit('detection', detection_data)
+        self.book_finder.on_detection = lambda detection_data: app.logging_socketio.emit_detection(self.run_context, detection_data)
 
     def run(self):
         """

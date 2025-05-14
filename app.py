@@ -14,7 +14,7 @@ import sys
 #   that all relevant operations are non-blocking and work together with eventlet.
 eventlet.monkey_patch()
 
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify, redirect
 from libs.book_finder_thread import BookFinderThread
 from libs.database_manager import DatabaseManager
 from libs.logging_socketio import LoggingSocketIO
@@ -26,10 +26,7 @@ class BooksOnShelvesApp(Flask):
 
         # Initialize logging
         logging.basicConfig(level=logging.INFO)
-        
-        # Initialize logging
-        run_namespace = '/run_default'  # This can later be dynamically set per run
-        self.logging_socketio = LoggingSocketIO(self, namespace=run_namespace)
+        self.logging_socketio = LoggingSocketIO(self)
         
         # Initialize database manager as a singleton
         self.db_manager = DatabaseManager(os.path.join(os.getcwd(), "bookshelves.db"))
@@ -39,9 +36,6 @@ class BooksOnShelvesApp(Flask):
         self.route("/run", methods=['GET', 'POST'])(self.run_page)
         self.route("/runs")(self.get_runs)
         self.route("/runs/<run_id>/detections")(self.get_detections)
-
-        # Register the emit_detection callback for BookFinderThread
-        self.emit_detection_callback = self.emit_detection
 
     def index(self):
         return render_template("index.html")
@@ -56,12 +50,23 @@ class BooksOnShelvesApp(Flask):
                 return jsonify({"error": "Keine Quelle angegeben"}), 400
 
             try:
-                # Starte BookFinder in einem separaten Thread
+                # Start BookFinder in new thread
                 finder_thread = BookFinderThread(self, source, self.db_manager, debug=int(debug))
-                finder_thread.start()
                 
-                # Weiterleitung zur run.html, die die Live-Updates anzeigt
-                return render_template("run.html")
+                # Register new namespace for logging output of the thread
+                run_id = finder_thread.run_context.run_id
+                self.logging_socketio.register_namespace(run_id)
+                
+                finder_thread.start()
+
+                # Watch for the thread to end to deregister the logging namespace again
+                def watcher():
+                    finder_thread.join()
+                    self.logging_socketio.deregister_namespace(run_id)
+                threading.Thread(target=watcher, daemon=True).start()
+
+                # Weiterleitung zur /run-Route mit Run-ID als Query-Parameter
+                return redirect(f"/run?run_id={run_id}")
             except Exception as e:
                 logging.error(f"Fehler beim Starten der Bucherkennung: {str(e)}")
                 return jsonify({"error": str(e)}), 500
@@ -86,10 +91,6 @@ class BooksOnShelvesApp(Flask):
         except Exception as e:
             logging.error(f"Fehler beim Abrufen der Detections: {str(e)}")
             return jsonify({"error": str(e)}), 500
-
-    def emit_detection(self, detection_data):
-        """Sends detection data via WebSocket using LoggingSocketIO."""
-        self.logging_socketio.emit('detection', detection_data)
 
 
 # Signal-Handler für SIGINT registrieren

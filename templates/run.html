@@ -69,7 +69,13 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
     <script>
-        const socket = io('/run_default'); // Explicitly connect to the correct namespace
+        // Hole die Run-ID aus der URL oder einer anderen Quelle
+        const runId = new URLSearchParams(window.location.search).get('run_id');
+        const namespace = runId ? `/run_${runId}` : '/default';
+
+        // Verbinde mit dem entsprechenden Namespace
+        const socket = io(namespace);
+
         const logContainer = document.getElementById('log-container');
         const detectionsList = document.getElementById('detections-list');
         const logPlaceholder = document.getElementById('log-placeholder');
