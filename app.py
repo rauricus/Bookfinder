@@ -4,6 +4,7 @@ import threading
 import eventlet
 import sqlite3
 import signal
+import sys
 
 # Apply eventlet monkey-patching.
 #   Note this has to be done HERE, before importing any other modules. The module throws an
@@ -94,9 +95,11 @@ class BooksOnShelvesApp(Flask):
 # Signal-Handler für SIGINT registrieren
 def handle_sigint(signal_received, frame):
     """Handles SIGINT (Ctrl-C) to clean up resources."""
-    logging.info("SIGINT received. Cleaning up resources...")
+    
+    logging.info("Ausführung unterbrochen. Geben Ressourcen frei...")
     flask_app.logging_socketio.teardown()
-    logging.info("Cleanup complete. Exiting.")
+    
+    flask_app.logger.info("📘 Bookfinder Server heruntergefahren.")
     exit(0)
 
 signal.signal(signal.SIGINT, handle_sigint)
@@ -104,5 +107,7 @@ signal.signal(signal.SIGINT, handle_sigint)
 # Create an instance of the BooksOnShelvesApp class and run the application
 if __name__ == '__main__':
     flask_app = BooksOnShelvesApp(__name__)
-    # Verwende die `run_server`-Methode von LoggingSocketIO
+    
+    flask_app.logger.info("📘 Bookfinder Server startet auf und hört auf Anfragen unter http://0.0.0.0:5010")
     flask_app.logging_socketio.run_server(flask_app, host='0.0.0.0', port=5010)
+
