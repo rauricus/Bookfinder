@@ -3,7 +3,7 @@ from PIL import Image
 import cv2
 import numpy as np
 
-from libs.logging.log_context import get_logger
+from libs.logging import get_logger
 from libs.utils.image_utils import cropImage, preprocess_for_ocr
 from libs.utils.text_utils import clean_ocr_text
 

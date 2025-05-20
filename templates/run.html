@@ -3,12 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Current Run</title>
+    <title>Book Detection Run</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #333;
+            text-decoration: none;
+            padding: 5px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .back-link:hover {
+            background-color: #f0f0f0;
         }
         .tab {
             display: inline-block;
@@ -44,23 +56,45 @@
             margin: 5px 0;
             background-color: #fff;
             border: 1px solid #eee;
+            border-radius: 4px;
         }
         .placeholder {
             text-align: center;
             color: #666;
             padding: 20px;
         }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #historical-log {
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+        }
     </style>
 </head>
 <body>
-    <h1>Aktueller Run</h1>
+    <a href="/" class="back-link">← Zurück zur Übersicht</a>
+    <h1>Book Detection Run #{{ run_id }}</h1>
+    <div class="status" id="run-status"></div>
     <div>
         <div class="tab active" id="log-tab">Log</div>
         <div class="tab" id="detections-tab">Detections</div>
     </div>
     <div class="tab-content active" id="log-content">
+        {% if log_content %}
+        <div id="historical-log">
+            <pre>{{ log_content }}</pre>
+        </div>
+        {% endif %}
         <pre id="log-container"></pre>
-        <div id="log-placeholder" class="placeholder">Warte auf Logs...</div>
+        <div id="log-placeholder" class="placeholder">Warte auf neue Logs...</div>
     </div>
     <div class="tab-content" id="detections-content">
         <div id="detections-list"></div>
@@ -69,18 +103,17 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
     <script>
-        // Hole die Run-ID aus der URL oder einer anderen Quelle
-        const runId = new URLSearchParams(window.location.search).get('run_id');
-        const namespace = runId ? `/run_${runId}` : '/default';
-
-        // Verbinde mit dem entsprechenden Namespace
-        const socket = io(namespace);
-
+        // Connect to the run-specific namespace
+        const runId = '{{ run_id }}';
+        const socket = io('/run_' + runId);
+        
+        // DOM Elements
         const logContainer = document.getElementById('log-container');
         const detectionsList = document.getElementById('detections-list');
         const logPlaceholder = document.getElementById('log-placeholder');
         const detectionsPlaceholder = document.getElementById('detections-placeholder');
-
+        const runStatus = document.getElementById('run-status');
+        
         // Tab switching logic
         const logTab = document.getElementById('log-tab');
         const detectionsTab = document.getElementById('detections-tab');
@@ -101,30 +134,61 @@
             logContent.classList.remove('active');
         });
 
-        // Log updates
+        // Event handlers
         socket.on('log_message', (data) => {
-            logContainer.textContent += data.data + '\n';
-            logContainer.scrollTop = logContainer.scrollHeight; // Auto-scroll to bottom
+            const logEntry = `${data.timestamp} - ${data.level} - ${data.message}\n`;
+            logContainer.textContent += logEntry;
+            logContainer.scrollTop = logContainer.scrollHeight;
             
-            // Verstecke den Platzhalter, sobald Logs vorhanden sind
             if (logContainer.textContent.trim() !== '') {
                 logPlaceholder.style.display = 'none';
             }
         });
 
-        // Detection updates
         socket.on('detection', (data) => {
             const detectionDiv = document.createElement('div');
             detectionDiv.className = 'detection-item';
+            
+            let details = '';
+            if (data.book_details) {
+                details = `<br>Details: ${JSON.stringify(data.book_details, null, 2)}`;
+            }
+            
             detectionDiv.innerHTML = `
                 <strong>Detection ${data.id}</strong><br>
                 Bild: ${data.image_path}<br>
                 Titel: ${data.title || 'Kein Titel erkannt'}
+                ${details}
             `;
             detectionsList.appendChild(detectionDiv);
-            
-            // Verstecke den Platzhalter, sobald Detections vorhanden sind
             detectionsPlaceholder.style.display = 'none';
+        });
+
+        socket.on('run_status', (data) => {
+            let statusText = `Status: ${data.status} (${data.timestamp})`;
+            if (data.message) {
+                statusText += `\n${data.message}`;
+            }
+            runStatus.textContent = statusText;
+            
+            if (data.status === 'completed') {
+                runStatus.style.backgroundColor = '#e8f5e9';  // Light green
+            } else if (data.status === 'error') {
+                runStatus.style.backgroundColor = '#ffebee';  // Light red
+            }
+        });
+
+        // Connection status handling
+        socket.on('connect', () => {
+            console.log('Connected to run namespace');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from run namespace');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
         });
     </script>
 </body>

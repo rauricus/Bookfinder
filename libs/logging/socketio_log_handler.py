@@ -27,13 +27,18 @@ class SocketIOLogHandler(logging.Handler):
 
     def emit(self, record):
         log_message = self.format(record)
+        event_data = {
+            'timestamp': record.asctime if hasattr(record, 'asctime') else record.created,
+            'level': record.levelname,
+            'message': record.message
+        }
         if self.socketio.server.eio.sockets:
-            self.socketio.emit('log_message', {'data': log_message}, namespace=self.namespace)
+            self.socketio.emit('log_message', event_data, namespace=self.namespace)
         else:
-            self.log_buffer.append(log_message)  # Buffer the log message if no WebSocket connection exists
+            self.log_buffer.append(event_data)  # Buffer the log message if no WebSocket connection exists
 
     def flush_buffer(self):
         """Flush the log buffer to the WebSocket."""
-        for message in self.log_buffer:
-            self.socketio.emit('log_message', {'data': message}, namespace=self.namespace)
+        for event_data in self.log_buffer:
+            self.socketio.emit('log_message', event_data, namespace=self.namespace)
         self.log_buffer.clear()

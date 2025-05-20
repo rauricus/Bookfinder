@@ -1,10 +1,10 @@
 import os
+import sys
 import logging
 import threading
 import eventlet
 import sqlite3
 import signal
-import sys
 from datetime import datetime
 
 # Apply eventlet monkey-patching.
@@ -16,16 +16,19 @@ from datetime import datetime
 eventlet.monkey_patch()
 
 from flask import Flask, request, render_template, jsonify, redirect
+from flask_socketio import SocketIO
 
-
-from libs.logging.logging_socketio import LoggingSocketIO
-from libs.utils.general_utils import get_next_directory
-
+from libs.logging import get_logger, SocketManager
 from libs.database_manager import DatabaseManager
+from libs.utils.general_utils import get_next_directory
 from libs.book_finder_thread import BookFinderThread
+from libs.run_manager import RunManager
 
 import config
 
+
+# Modul-spezifischer Logger
+logger = get_logger(__name__)
 
 class BooksOnShelvesApp(Flask):
     def __init__(self, *args, **kwargs):
@@ -33,7 +36,10 @@ class BooksOnShelvesApp(Flask):
 
         # Initialize logging
         logging.basicConfig(level=logging.INFO)
-        self.logging_socketio = LoggingSocketIO(self)
+        
+        # Initialize SocketManager and RunManager
+        self.socket_manager = SocketManager(self)
+        self.run_manager = RunManager(self.socket_manager)
         
         # Initialize database manager as a singleton
         self.db_manager = DatabaseManager(os.path.join(os.getcwd(), "bookshelves.db"))
@@ -76,29 +82,44 @@ class BooksOnShelvesApp(Flask):
                     start_time=datetime.now().isoformat(),
                 )
                 
+                # Start a new run with the run manager
+                self.run_manager.start_run(
+                    run_id=run_context.run_id,
+                    output_dir=output_dir
+                )
+                
                 # Start BookFinder in new thread
-                finder_thread = BookFinderThread(self, source=source, output_dir=output_dir, run_context=run_context, debug=int(debug))
+                finder_thread = BookFinderThread(
+                    self,
+                    source=source,
+                    output_dir=output_dir,
+                    run_context=run_context,
+                    debug=int(debug)
+                )
                 
-                # Register new namespace for logging output of the thread
-                run_id = finder_thread.run_context.run_id
-                self.logging_socketio.register_namespace(run_id, output_dir)
-                
+                logger.info("🔍 Starte Bucherkennung...")
                 finder_thread.start()
 
-                # Watch for the thread to end to deregister the logging namespace again
+                # Watch for the thread to end
                 def watcher():
                     finder_thread.join()
-                    self.logging_socketio.deregister_namespace(run_id)
+                    # Stop the run when the thread is done
+                    self.run_manager.stop_run(run_context.run_id)
+                    logger.info("✅ Bucherkennung abgeschlossen")
+                    
                 threading.Thread(target=watcher, daemon=True).start()
 
                 # Weiterleitung zur /run-Route mit Run-ID als Query-Parameter
-                return redirect(f"/run?run_id={run_id}")
+                return redirect(f"/run?run_id={run_context.run_id}")
             except Exception as e:
                 logging.error(f"Fehler beim Starten der Bucherkennung: {str(e)}")
                 return jsonify({"error": str(e)}), 500
                 
         # GET request
-        return render_template("run.html")
+        run_id = request.args.get('run_id')
+        if not run_id:
+            return jsonify({"error": "Keine Run-ID angegeben"}), 400
+        return render_template("run.html", run_id=run_id)
 
     def get_runs(self):
         """Gibt eine Liste aller Runs zurück."""
@@ -122,9 +143,13 @@ class BooksOnShelvesApp(Flask):
 # Signal-Handler für SIGINT registrieren
 def handle_sigint(signal_received, frame):
     """Handles SIGINT (Ctrl-C) to clean up resources."""
-    
     logging.info("Ausführung unterbrochen. Geben Ressourcen frei...")
-    flask_app.logging_socketio.teardown()
+    
+    if hasattr(flask_app, 'run_manager'):
+        flask_app.run_manager.cleanup()
+    
+    if hasattr(flask_app, 'socket_manager'):
+        flask_app.socket_manager.teardown()
     
     flask_app.logger.info("📘 Bookfinder Server heruntergefahren.")
     exit(0)
@@ -136,5 +161,5 @@ if __name__ == '__main__':
     flask_app = BooksOnShelvesApp(__name__)
     
     flask_app.logger.info("📘 Bookfinder Server startet auf und hört auf Anfragen unter http://0.0.0.0:5010")
-    flask_app.logging_socketio.run_server(flask_app, host='0.0.0.0', port=5010)
+    flask_app.socket_manager.run_server(flask_app, host='0.0.0.0', port=5010)
 
