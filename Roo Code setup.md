@@ -18,7 +18,7 @@ Claude 3.5 Opus excels in handling complex planning and design tasks, offering d
 Code Mode (Implementation, Testing, Documentation)
 --------------------------------------------------
 Default model (for small tasks, single files, utility functions):
-* deepseek/deepseek-r1-0528-qwen3-8b (context length: 16880 tokens)
+* qwen/qwen3-1.7b (context length: 16870 tokens)
 
 For complex coding tasks and/or faster response:
 * OpenAI: GPT-4o (context length: 128K tokens)
