@@ -48,7 +48,7 @@ class BooksOnShelvesApp(Flask):
         self.route("/")(self.index)
         self.route("/run", methods=['GET', 'POST'])(self.run_page)
         self.route("/runs")(self.get_runs)
-        self.route("/runs/<run_id>/detections")(self.get_detections)
+        self.route("/runs/<run_id>/bookspines")(self.get_bookspines)
 
         # Thread-Lock für die Output Directory Erstellung
         self._output_dir_lock = threading.Lock()
@@ -130,11 +130,11 @@ class BooksOnShelvesApp(Flask):
             logging.error(f"Fehler beim Abrufen der Runs: {str(e)}")
             return jsonify({"error": str(e)}), 500
 
-    def get_detections(self, run_id):
+    def get_bookspines(self, run_id):
         """Gibt alle Detections für einen bestimmten Run zurück."""
         try:
-            detections = self.db_manager.get_detections_for_run(run_id)
-            return jsonify(detections)
+            bookspines = self.db_manager.get_bookspines_for_run(run_id)
+            return jsonify(bookspines)
         except Exception as e:
             logging.error(f"Fehler beim Abrufen der Detections: {str(e)}")
             return jsonify({"error": str(e)}), 500

@@ -120,8 +120,8 @@ class BookFinder:
 
                             # Ensure the image is wider than tall and also return a variant rotated by 180 degrees.
                             img, img_rotated_180 = preprocess_for_text_area_detection(img_cropped)
-                            # Log the detection
-                            detection_id = self.current_run.log_detection()
+                            # Log the bookspine
+                            bookspine_id = self.current_run.log_bookspine()
                             
                             # Save the original and rotated images
                             original_image_path = os.path.join(self.output_dir, "book", f"{filename}_{idx}.jpg")
@@ -181,15 +181,15 @@ class BookFinder:
                                 if book_details:
                                     logger.info(f"📖 Gefundene Buchdetails: {book_details}")
                                 # Logge die Variante und sende sie an den Callback
-                                self.current_run.log_detection_variant(detection_id, variant_path, best_title)
+                                self.current_run.log_bookspine_variant(bookspine_id, variant_path, best_title)
                                 if self.on_detection:
-                                    detection_data = {
-                                        'id': detection_id,
+                                    bookspine_data = {
+                                        'id': bookspine_id,
                                         'image_path': variant_path,
                                         'title': best_title,
                                         'book_details': book_details
                                     }
-                                    self.on_detection(detection_data)
+                                    self.on_detection(bookspine_data)
 
                         else:
                             logger.info("Skipping ", result.names[idx], '...')

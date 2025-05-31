@@ -43,15 +43,15 @@ class BookFinderThread(threading.Thread):
         # Callback für Detections mit dem neuen Event-System
         self.book_finder.on_detection = self._handle_detection
 
-    def _handle_detection(self, detection_data):
+    def _handle_detection(self, bookspine_data):
         """
         Verarbeitet eine neue Detection mit dem typisierten Event-System.
         """
         event = DetectionEvent(
-            id=detection_data.get('id'),
-            image_path=detection_data.get('image_path'),
-            title=detection_data.get('title'),
-            book_details=detection_data.get('book_details')
+            id=bookspine_data.get('id'),
+            image_path=bookspine_data.get('image_path'),
+            title=bookspine_data.get('title'),
+            book_details=bookspine_data.get('book_details')
         )
         self.socket_manager.emit_event(
             event_type=EventType.DETECTION,

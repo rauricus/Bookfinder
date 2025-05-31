@@ -37,30 +37,30 @@ class RunContext:
         conn.commit()
         conn.close()
 
-    def log_detection(self):
+    def log_bookspine(self):
         conn = self._connect()
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO detections (run_id)
+            INSERT INTO bookspines (run_id)
             VALUES (?)
             """,
             (self.run_id,),
         )
-        detection_id = cursor.lastrowid
+        bookspine_id = cursor.lastrowid
         conn.commit()
         conn.close()
-        return detection_id
+        return bookspine_id
 
-    def log_detection_variant(self, detection_id, image_path, best_title):
+    def log_bookspine_variant(self, bookspine_id, image_path, best_title):
         conn = self._connect()
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO detection_variants (detection_id, image_path, best_title)
+            INSERT INTO bookspine_variants (bookspine_id, image_path, best_title)
             VALUES (?, ?, ?)
             """,
-            (detection_id, image_path, best_title),
+            (bookspine_id, image_path, best_title),
         )
         conn.commit()
         conn.close()
@@ -90,7 +90,7 @@ class DatabaseManager:
         """)
 
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS detections (
+            CREATE TABLE IF NOT EXISTS bookspines (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 run_id INTEGER NOT NULL,
                 created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -100,14 +100,14 @@ class DatabaseManager:
         """)
 
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS detection_variants (
+            CREATE TABLE IF NOT EXISTS bookspine_variants (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                detection_id INTEGER NOT NULL,
+                bookspine_id INTEGER NOT NULL,
                 image_path TEXT NOT NULL,
                 best_title TEXT,
                 created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (detection_id) REFERENCES detections (id)
+                FOREIGN KEY (bookspine_id) REFERENCES bookspines (id)
             )
         """)
 
@@ -149,15 +149,15 @@ class DatabaseManager:
         conn.close()
         return run_id
 
-    def get_detections(self, run_id=None):
-        """Retrieve detections from the database, optionally filtered by run_id."""
+    def get_bookspines(self, run_id=None):
+        """Retrieve bookspines from the database, optionally filtered by run_id."""
         conn = self._connect()
         cursor = conn.cursor()
 
         if run_id:
-            cursor.execute("SELECT * FROM detections WHERE run_id = ?", (run_id,))
+            cursor.execute("SELECT * FROM bookspines WHERE run_id = ?", (run_id,))
         else:
-            cursor.execute("SELECT * FROM detections")
+            cursor.execute("SELECT * FROM bookspines")
 
         rows = cursor.fetchall()
         conn.close()

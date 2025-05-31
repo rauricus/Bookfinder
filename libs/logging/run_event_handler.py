@@ -12,22 +12,22 @@ class RunEventHandler:
         self.namespace = f'/run_{run_id}'
         self.run_id = run_id
         
-    def emit_detection(self, detection_data: dict):
+    def emit_detection(self, bookspine_data: dict):
         """
-        Emit a detection event.
+        Emit a bookspine event.
         
         Args:
-            detection_data: Dictionary containing detection information with keys:
+            bookspine_data: Dictionary containing bookspine information with keys:
                 - id: Detection ID
                 - image_path: Path to the detected book image
                 - title: Optional book title
                 - book_details: Optional dictionary with book details
         """
         event = DetectionEvent(
-            id=detection_data['id'],
-            image_path=detection_data['image_path'],
-            title=detection_data.get('title'),
-            book_details=detection_data.get('book_details')
+            id=bookspine_data['id'],
+            image_path=bookspine_data['image_path'],
+            title=bookspine_data.get('title'),
+            book_details=bookspine_data.get('book_details')
         )
         self.socket_manager.emit_event(EventType.DETECTION, event, self.namespace)
         

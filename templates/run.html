@@ -51,7 +51,7 @@
             height: 70vh;
             overflow-y: scroll;
         }
-        .detection-item {
+        .bookspine-item {
             padding: 10px;
             margin: 5px 0;
             background-color: #fff;
@@ -85,7 +85,7 @@
     <div class="status" id="run-status"></div>
     <div>
         <div class="tab active" id="log-tab">Log</div>
-        <div class="tab" id="detections-tab">Detections</div>
+        <div class="tab" id="bookspines-tab">Detections</div>
     </div>
     <div class="tab-content active" id="log-content">
         {% if log_content %}
@@ -96,9 +96,9 @@
         <pre id="log-container"></pre>
         <div id="log-placeholder" class="placeholder">Warte auf neue Logs...</div>
     </div>
-    <div class="tab-content" id="detections-content">
-        <div id="detections-list"></div>
-        <div id="detections-placeholder" class="placeholder">Noch keine Detections vorhanden...</div>
+    <div class="tab-content" id="bookspines-content">
+        <div id="bookspines-list"></div>
+        <div id="bookspines-placeholder" class="placeholder">Noch keine Detections vorhanden...</div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
@@ -109,28 +109,28 @@
         
         // DOM Elements
         const logContainer = document.getElementById('log-container');
-        const detectionsList = document.getElementById('detections-list');
+        const bookspinesList = document.getElementById('bookspines-list');
         const logPlaceholder = document.getElementById('log-placeholder');
-        const detectionsPlaceholder = document.getElementById('detections-placeholder');
+        const bookspinesPlaceholder = document.getElementById('bookspines-placeholder');
         const runStatus = document.getElementById('run-status');
         
         // Tab switching logic
         const logTab = document.getElementById('log-tab');
-        const detectionsTab = document.getElementById('detections-tab');
+        const bookspinesTab = document.getElementById('bookspines-tab');
         const logContent = document.getElementById('log-content');
-        const detectionsContent = document.getElementById('detections-content');
+        const bookspinesContent = document.getElementById('bookspines-content');
 
         logTab.addEventListener('click', () => {
             logTab.classList.add('active');
-            detectionsTab.classList.remove('active');
+            bookspinesTab.classList.remove('active');
             logContent.classList.add('active');
-            detectionsContent.classList.remove('active');
+            bookspinesContent.classList.remove('active');
         });
 
-        detectionsTab.addEventListener('click', () => {
-            detectionsTab.classList.add('active');
+        bookspinesTab.addEventListener('click', () => {
+            bookspinesTab.classList.add('active');
             logTab.classList.remove('active');
-            detectionsContent.classList.add('active');
+            bookspinesContent.classList.add('active');
             logContent.classList.remove('active');
         });
 
@@ -145,23 +145,23 @@
             }
         });
 
-        socket.on('detection', (data) => {
-            const detectionDiv = document.createElement('div');
-            detectionDiv.className = 'detection-item';
+        socket.on('bookspine', (data) => {
+            const bookspineDiv = document.createElement('div');
+            bookspineDiv.className = 'bookspine-item';
             
             let details = '';
             if (data.book_details) {
                 details = `<br>Details: ${JSON.stringify(data.book_details, null, 2)}`;
             }
             
-            detectionDiv.innerHTML = `
+            bookspineDiv.innerHTML = `
                 <strong>Detection ${data.id}</strong><br>
                 Bild: ${data.image_path}<br>
                 Titel: ${data.title || 'Kein Titel erkannt'}
                 ${details}
             `;
-            detectionsList.appendChild(detectionDiv);
-            detectionsPlaceholder.style.display = 'none';
+            bookspinesList.appendChild(bookspineDiv);
+            bookspinesPlaceholder.style.display = 'none';
         });
 
         socket.on('run_status', (data) => {
