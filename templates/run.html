@@ -62,10 +62,21 @@
             background-color: #f0f0f0;
             font-weight: bold;
             border-bottom: 1px solid #ddd;
-            cursor: pointer;
         }
-        .bookspine-header:hover {
-            background-color: #e8e8e8;
+        .bookspine-details {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-bottom: 1px solid #ddd;
+        }
+        .book-detail {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        .book-detail:last-child {
+            margin-bottom: 0;
         }
         .bookspine-variants {
             display: flex;
@@ -115,12 +126,6 @@
             margin-bottom: 10px;
             padding-bottom: 10px;
         }
-        .book-details {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 4px;
-        }
         .image-placeholder {
             width: 100%;
             height: 200px;
@@ -131,6 +136,10 @@
             margin-bottom: 10px;
             border: 1px solid #ddd;
             color: #666;
+            font-style: italic;
+        }
+        .no-details {
+            color: #888;
             font-style: italic;
         }
     </style>
@@ -228,6 +237,12 @@
                 header.className = 'bookspine-header';
                 header.textContent = `Bücherrücken #${data.id}`;
                 
+                // Create details container
+                const detailsContainer = document.createElement('div');
+                detailsContainer.className = 'bookspine-details';
+                detailsContainer.id = `details-${data.id}`;
+                detailsContainer.innerHTML = '<div class="no-details">Keine Buchdetails verfügbar</div>';
+                
                 // Create variants container
                 const variantsContainer = document.createElement('div');
                 variantsContainer.className = 'bookspine-variants';
@@ -235,8 +250,28 @@
                 
                 // Add to DOM
                 bookspineContainer.appendChild(header);
+                bookspineContainer.appendChild(detailsContainer);
                 bookspineContainer.appendChild(variantsContainer);
                 bookspinesList.appendChild(bookspineContainer);
+            }
+            
+            // If this detection has book details, add them to the details section
+            if (data.book_details) {
+                const detailsContainer = document.getElementById(`details-${data.id}`);
+                
+                // Remove the "no details" message if it exists
+                if (detailsContainer.querySelector('.no-details')) {
+                    detailsContainer.innerHTML = '';
+                }
+                
+                // Add the book details
+                const detailDiv = document.createElement('div');
+                detailDiv.className = 'book-detail';
+                detailDiv.innerHTML = `
+                    <strong>Buchdetails:</strong><br>
+                    ${formatBookDetails(data.book_details)}
+                `;
+                detailsContainer.appendChild(detailDiv);
             }
             
             // Get the variants container
@@ -266,16 +301,6 @@
             
             // Add title
             variantContent += `<div class="variant-title">Titel: ${data.title || 'Kein Titel erkannt'}</div>`;
-            
-            // Add book details if available
-            if (data.book_details) {
-                variantContent += `
-                    <div class="book-details">
-                        <strong>Buchdetails:</strong><br>
-                        ${formatBookDetails(data.book_details)}
-                    </div>
-                `;
-            }
             
             variantDiv.innerHTML = variantContent;
             variantsContainer.appendChild(variantDiv);
