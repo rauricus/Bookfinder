@@ -10,7 +10,7 @@ For complex questions and/or faster response:
 Architect Mode (Planning, Design, Research)
 -------------------------------------------
 Default model:
-* Anthropic: Claude 3.5 Opus (context length: 200K tokens)
+* Anthropic: Claude 4 Opus (context length: 200K tokens)
 
 Claude 3.5 Opus excels in handling complex planning and design tasks, offering detailed and coherent outputs suitable for architectural considerations. ￼
 
@@ -29,7 +29,7 @@ GPT-4o provides robust code generation and understanding capabilities, making it
 Debug Mode (Error Diagnosis and Fixes)
 --------------------------------------
 Default model:
-* Anthropic: Claude 3.5 Sonnet (context length: 200K tokens)
+* Anthropic: Claude 4 Sonnet (context length: 200K tokens)
 
 Claude 3.5 Sonnet’s analytical abilities make it effective for diagnosing errors and suggesting fixes in code. ￼
 
