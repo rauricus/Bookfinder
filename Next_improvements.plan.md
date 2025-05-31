@@ -39,10 +39,10 @@ ocr_text = pytesseract.image_to_string(processed_image, lang='deu+eng', config="
 ```
 
 **Tasks:**
-- [ ] Install German language pack for Tesseract (`tesseract-ocr-deu`)
-- [ ] Modify `ocr_utils.py` to accept language parameter
-- [ ] Update OCR calls to use appropriate language codes
-- [ ] Test with German book samples
+- ~~[ ] Install German language pack for Tesseract (`tesseract-ocr-deu`)~~
+- [x] Modify `ocr_utils.py` to accept language parameter
+- [x] Update OCR calls to use appropriate language codes
+- [x] Test with German book samples
 
 ### 1.2 Implement Language Detection
 **Priority: MEDIUM**
