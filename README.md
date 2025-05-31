@@ -66,6 +66,9 @@ Only then I do the following:
 Added a script using a pragrmatic approach to get book titles in a specific language from OpenLibrary: we search for common short words in a language; in the result list, we remove those where the language of the record does not match the language we are looking for. This is due to many entries being stored in English by default, but then their EDITIONS contain the actual, localized title. We can extract this in the future - it's too complex for now.
 
 
-## Next step for web app
-* Store book details found during a lookup in the database as well.
-* Show stored book details when showing infos from a past run.
+## Next steps for web app
+As soon as we have better detection, better OCR and received better book data:
+* Allow to re-detect text on a book spine for a selected variant.
+* Allow to re-lookup text for a selected bookspine.
+* Allow to select one set of book details as the "correct" book details for a specific bookspine.
+* Allow to lookup manually entered text and select that as the "correct" book details, as a way to override automatic text detection and lookup.
