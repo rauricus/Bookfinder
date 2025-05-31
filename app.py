@@ -15,7 +15,7 @@ from datetime import datetime
 #   that all relevant operations are non-blocking and work together with eventlet.
 eventlet.monkey_patch()
 
-from flask import Flask, request, render_template, jsonify, redirect
+from flask import Flask, request, render_template, jsonify, redirect, send_file, abort
 from flask_socketio import SocketIO
 
 from libs.logging import get_logger, SocketManager
@@ -49,6 +49,7 @@ class BooksOnShelvesApp(Flask):
         self.route("/run", methods=['GET', 'POST'])(self.run_page)
         self.route("/runs")(self.get_runs)
         self.route("/runs/<run_id>/bookspines")(self.get_bookspines)
+        self.route("/image/<run_id>")(self.serve_image)
 
         # Thread-Lock for creating output directories
         self._output_dir_lock = threading.Lock()
@@ -138,6 +139,47 @@ class BooksOnShelvesApp(Flask):
         except Exception as e:
             logging.error(f"Error on retrieving bookspines: {str(e)}")
             return jsonify({"error": str(e)}), 500
+            
+    def serve_image(self, run_id):
+        """Serves an image file based on the run_id and path."""
+        try:
+            # Get the image path from the query parameters
+            image_path = request.args.get('path')
+            if not image_path:
+                return jsonify({"error": "No image path provided"}), 400
+                
+            # For security, ensure the path doesn't contain '..' to prevent directory traversal
+            if '..' in image_path:
+                return jsonify({"error": "Invalid image path"}), 400
+                
+            # Check if the path is absolute or relative
+            if os.path.isabs(image_path):
+                # If absolute, use it directly
+                full_path = image_path
+            else:
+                # If relative, resolve it relative to the project root
+                full_path = os.path.join(config.HOME_DIR, image_path)
+                
+            # Check if the file exists
+            if not os.path.isfile(full_path):
+                logger.error(f"Image file not found: {full_path}")
+                return jsonify({"error": "Image file not found"}), 404
+                
+            # Determine the MIME type based on the file extension
+            _, ext = os.path.splitext(full_path)
+            mime_type = {
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif'
+            }.get(ext.lower(), 'application/octet-stream')
+            
+            # Serve the file
+            return send_file(full_path, mimetype=mime_type)
+            
+        except Exception as e:
+            logger.error(f"Error serving image: {str(e)}")
+            return jsonify({"error": str(e)}), 500
 
 
 # Register signal handler for SIGINT when app is shut down using Ctrl/Cmd-C
@@ -162,4 +204,3 @@ if __name__ == '__main__':
     
     flask_app.logger.info("📘 Bookfinder Server started and listening for requests on http://0.0.0.0:5010")
     flask_app.socket_manager.run_server(flask_app, host='0.0.0.0', port=5010)
-
