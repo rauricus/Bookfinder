@@ -160,6 +160,6 @@ signal.signal(signal.SIGINT, handle_sigint)
 if __name__ == '__main__':
     flask_app = BooksOnShelvesApp(__name__)
     
-    flask_app.logger.info("📘 Bookfinder Server started and listens for requests on http://0.0.0.0:5010")
+    flask_app.logger.info("📘 Bookfinder Server started and listening for requests on http://0.0.0.0:5010")
     flask_app.socket_manager.run_server(flask_app, host='0.0.0.0', port=5010)
 
