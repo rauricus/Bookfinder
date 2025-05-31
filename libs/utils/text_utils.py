@@ -8,10 +8,10 @@ from Levenshtein import distance as levenshtein_distance
 import config
 from libs.logging import get_logger
 
-# Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
+# Module-specific logger that uses the module name as prefix for log messages
 logger = get_logger(__name__)
 
-# Unicode-Zeichenbereiche für verschiedene Sprachen
+# Unicode character ranges for different languages
 LANGUAGE_RANGES = {
     "de": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÄÖÜäöüß",
     "fr": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀÂÇÉÈÊËÎÏÔÙÛÜŸàâçéèêëîïôùûüÿ"
@@ -19,7 +19,7 @@ LANGUAGE_RANGES = {
 
 # Load word spelling dictionaries
 def load_symspell(dictionary_path, max_edit_distance=2, separator=" "):
-    """Lädt Dictionaires für Text Autokorrektur."""
+    """Loads dictionaries for text autocorrection."""
     sym_spell = SymSpell(max_dictionary_edit_distance=max_edit_distance, prefix_length=7)
 
     if not sym_spell.load_dictionary(dictionary_path, term_index=0, count_index=1, separator=separator):
@@ -73,43 +73,43 @@ def initialize():
 
 
 def get_language_charset(languages):
-    """Erstellt eine Zeichenmenge mit allen Buchstaben der gewünschten Sprachen."""
+    """Creates a character set with all letters of the desired languages."""
     allowed_chars = set()
     for lang in languages:
         if lang in LANGUAGE_RANGES:
             allowed_chars.update(LANGUAGE_RANGES[lang])
         else:
-            logger.warning(f"⚠ Sprache {lang} nicht bekannt, wird ignoriert.")
+            logger.warning(f"⚠ Language {lang} not recognized, will be ignored.")
     return "".join(allowed_chars)
 
 
 def clean_ocr_text(text, languages=("de", "fr")):
-    """Bereinigt OCR-Text basierend auf erlaubten Zeichen für bestimmte Sprachen."""
+    """Cleans OCR text based on allowed characters for specific languages."""
     allowed_chars = get_language_charset(languages)
 
-    # Unicode-Normalisierung, um inkonsistente Zeichen darzustellen
+    # Unicode normalization to represent inconsistent characters
     text = unicodedata.normalize("NFKC", text)
 
-    # Entfernt alle Zeichen, die nicht in der erlaubten Zeichengruppe sind
+    # Remove all characters that are not in the allowed character group
     text = "".join(char for char in text if char in allowed_chars or char.isspace())
 
-    # Mehrfache Leerzeichen entfernen und Text in Kleinbuchstaben umwandeln
+    # Remove multiple spaces and convert text to lowercase
     text = re.sub(r"\s+", " ", text).strip().lower()
     
     return text
 
 
 def detect_names(word, lang="de"):
-    """Überprüft, ob ein Wort ein bekannter Name ist, indem es mit der Autorenliste abgeglichen wird."""
+    """Checks if a word is a known name by matching it against the author list."""
     if lang not in NAME_DICTS or not NAME_DICTS[lang]:
-        return False  # Falls keine Namen bekannt, nicht als Name erkennen
+        return False  # If no names are known, don't recognize as name
     
     suggestions = NAME_DICTS[lang].lookup(word, Verbosity.CLOSEST, max_edit_distance=2)
-    return bool(suggestions)  # True, falls Wort ein bekannter Name ist
+    return bool(suggestions)  # True if word is a known name
 
 
 def is_valid_word(word, lang="de"):
-    """Überprüft, ob ein Wort ein gültiges Wort im Wort oder Namens-Dictionary ist."""
+    """Checks if a word is a valid word in the word or name dictionary."""
     if lang in WORD_DICTS and WORD_DICTS[lang]:
         if word in WORD_DICTS[lang].words:
             return True
@@ -122,47 +122,47 @@ def is_valid_word(word, lang="de"):
 
 
 def compute_validity_score(text, lang="de"):
-    """Berechnet die Prozentzahl von gültigen Wörtern in einem Text."""
+    """Calculates the percentage of valid words in a text."""
     words = text.split()
     if not words:
-        return 0.0  # Verhindere Division durch Null
+        return 0.0  # Prevent division by zero
 
     valid_words = [word for word in words if is_valid_word(word, lang)]
     return len(valid_words) / len(words)
 
 
 def match_to_words(text, lang="de"):
-    """Korrigiert OCR-Text mittels Autokorrektur für verschiedene Sprachen, 
-    aber belässt erkannte Namen unverändert."""
+    """Corrects OCR text using autocorrection for different languages, 
+    but leaves recognized names unchanged."""
 
-    # Jedes Wort einzeln korrigieren
+    # Correct each word individually
     corrected_words = []
 
     if lang in WORD_DICTS and WORD_DICTS[lang]:
         for word in text.split():
-            # Namenserkennung: Falls das Wort ein Name ist, nicht korrigieren
+            # Name detection: If the word is a name, don't correct it
             if detect_names(word, lang):
                 corrected_words.append(word)
                 continue
 
-            # Falls kein Name, normal mit Autokorrektur korrigieren
+            # If not a name, correct normally with autocorrection
             suggestions = WORD_DICTS[lang].lookup(word, Verbosity.CLOSEST, max_edit_distance=2)
             if suggestions:
-                corrected_words.append(suggestions[0].term)  # Beste Korrektur nehmen
+                corrected_words.append(suggestions[0].term)  # Take best correction
             else:
-                corrected_words.append(word)  # Falls keine Korrektur möglich ist, das Original behalten
+                corrected_words.append(word)  # If no correction possible, keep the original
 
-        # Ergebnis ausgeben
+        # Output result
         corrected_text = " ".join(corrected_words)
 
     return corrected_text
 
 
 def match_to_titles(text, lang="de"):
-    """Korrigiert text speziell gegen eine Buchtitelliste."""
+    """Corrects text specifically against a book title list."""
     if lang not in BOOKTITLE_DICTS or not BOOKTITLE_DICTS[lang]:
-        logger.warning(f"⚠ Kein SymSpell-Wörterbuch für Sprache '{lang}' gefunden.")
-        return text  # Ohne Korrektur zurückgeben, wenn kein Wörterbuch verfügbar ist
+        logger.warning(f"⚠ No SymSpell dictionary found for language '{lang}'.")
+        return text  # Return without correction if no dictionary is available
 
     suggestions = BOOKTITLE_DICTS[lang].lookup_compound(text, max_edit_distance=2)
 
@@ -170,8 +170,8 @@ def match_to_titles(text, lang="de"):
         corrected_text = suggestions[0].term
         return corrected_text
     else:
-        logger.info(f"⚠ Keine Korrektur für: '{text}' gefunden.")
-        return text  # Keine Korrektur gefunden
+        logger.info(f"⚠ No correction found for: '{text}'.")
+        return text  # No correction found
     
 
 def is_match_better(corrected, matched, lev_threshold=0.4, jaccard_threshold=0.5):

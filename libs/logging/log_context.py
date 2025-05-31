@@ -3,22 +3,22 @@ import threading
 
 class RunLogContext:
     """
-    Ein Context Manager für run-spezifisches Logging.
+    A context manager for run-specific logging.
     
-    Diese Implementierung nutzt das "Ambient Context Pattern", bei dem Kontext-Informationen
-    implizit durch den Call Stack propagiert werden, ohne sie explizit als Parameter
-    weitergeben zu müssen. Dies wird durch thread-lokalen Speicher (threading.local) 
-    erreicht.
+    This implementation uses the "Ambient Context Pattern", where context information
+    is implicitly propagated through the call stack without explicitly passing it as parameters
+    must be avoided. This is achieved through thread-local storage (threading.local) 
+    isolation.
     
-    Vorteile:
-    - Logger kann überall im Code ohne expliziten Kontext verwendet werden
-    - Funktionen in der Aufrufkette müssen den Kontext nicht kennen
-    - Externe Bibliotheken können den Logger ohne Anpassung nutzen
-    - Thread-sicher durch Isolation des Kontexts pro Thread
+    Benefits:
+    - The logger can be used anywhere in the code without explicit context
+    - Functions in the call chain do not need to know about the context
+    - External libraries can use the logger without modification
+    - Thread-safe through isolation of context per thread
     
-    Beispiel:
+    Example:
         with RunLogContext(run_id):
-            logger.info("Diese Nachricht wird im Run-Kontext geloggt")
+            logger.info("This message is logged in the run context")
     """
     _thread_local = threading.local()
 
@@ -39,7 +39,7 @@ class RunLogContext:
 
 class LogFilter(logging.Filter):
     """
-    Filter für die Trennung von App- und Run-spezifischen Logs.
+    Filter for separating app-specific and run-specific logs.
     """
     def __init__(self, is_run_specific):
         super().__init__()
@@ -54,7 +54,7 @@ class LogFilter(logging.Filter):
 
 def get_logger(name=None):
     """
-    Erstellt einen Logger, der automatisch die run_id aus dem RunLogContext hinzufügt.
+    Creates a logger that automatically adds the run_id from the RunLogContext.
     """
     logger = logging.getLogger(name)
 

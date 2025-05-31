@@ -19,7 +19,7 @@ from libs.utils.ocr_utils import ocr_onImage
 from libs.utils.lookup_utils import lookup_book_details
 from libs.logging import get_logger
 
-# Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
+# Module-specific logger that uses the module name as a prefix for log messages
 logger = get_logger(__name__)
 
 TIMESTR_FORMAT = "%d.%m.%Y %H:%M"
@@ -33,7 +33,7 @@ class BookFinder:
         self.output_dir = output_dir
         self.debug = debug
         
-        self.on_detection = None  # Callback für neue Detections
+        self.on_detection = None  # Callback for new detections
 
         # Initialize all necessary modules
         initialize_libs()
@@ -78,7 +78,7 @@ class BookFinder:
             try:
                 rel_source = os.path.relpath(source, config.HOME_DIR)
             except ValueError:
-                # Falls der Pfad auf einem anderen Laufwerk liegt oder ein URL ist
+                # If the path is on a different drive or is a URL
                 rel_source = source
         rel_output = os.path.relpath(self.output_dir, config.HOME_DIR)
 
@@ -156,7 +156,7 @@ class BookFinder:
                                     # Step 2: Compute validity AFTER correction
                                     corrected_validity_score = compute_validity_score(corrected_text)
 
-                                    logger.debug(f"    {region}: '{cleaned_text}' -> '{corrected_text}' (Bewertung: {corrected_validity_score:.2f} [ignored])")
+                                    logger.debug(f"    {region}: '{cleaned_text}' -> '{corrected_text}' (Rating: {corrected_validity_score:.2f} [ignored])")
 
                                     valid_text_regions[region] = corrected_text
 
@@ -176,11 +176,11 @@ class BookFinder:
                                 best_title = select_best_title(corrected_text, matched_title)
                                 logger.info(f"📚 Best title: {best_title}")
 
-                                # Buchdetails abrufen
+                                # Retrieve book details
                                 book_details = lookup_book_details(best_title)
                                 if book_details:
                                     logger.info(f"📖 Gefundene Buchdetails: {book_details}")
-                                # Logge die Variante und sende sie an den Callback
+                                # Log the variant and send it to the callback
                                 self.current_run.log_bookspine_variant(bookspine_id, variant_path, best_title)
                                 if self.on_detection:
                                     bookspine_data = {

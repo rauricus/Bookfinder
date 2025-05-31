@@ -6,7 +6,7 @@ from libs.utils.general_utils import iso639_1_to_3
 from libs.logging import get_logger
 
 
-# Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
+# Module-specific logger that uses the module name as prefix for log messages
 logger = get_logger(__name__)
 
 def initialize():
@@ -16,10 +16,10 @@ def initialize():
     
 def search_dnb(query_string, language="de"):
     if not query_string:
-        logger.info("Kein Titel angegeben. Überspringe Lookup in DNB.")
+        logger.info("No title provided. Skipping DNB lookup.")
         return None
 
-    logger.info("🔎 Suche mit DNB (SRU)...")
+    logger.info("🔎 Searching with DNB (SRU)...")
 
     try:
         dnb_url = "https://services.dnb.de/sru/dnb"
@@ -45,7 +45,7 @@ def search_dnb(query_string, language="de"):
         isbn_el = root.find('.//bibo:isbn13', ns)
 
         if all(el is None for el in [title_el, author_el, year_el, isbn_el]):
-            logger.info(f"⚠️ Kein Buch gefunden für Query: {query_string}")
+            logger.info(f"⚠️ No book found for query: {query_string}")
             return None
 
         return {
@@ -56,44 +56,44 @@ def search_dnb(query_string, language="de"):
         }
 
     except Exception as e:
-        logger.error(f"❌ Fehler bei DNB-Anfrage: {e}")
+        logger.error(f"❌ Error in DNB request: {e}")
         return None
     
     
 def search_openlibrary(query_string, language="de"):
     """
-    Sucht Buchdetails basierend auf dem Titel in der OpenLibrary-API.
+    Searches for book details based on the title in the OpenLibrary API.
     
     OpenLibrary API: https://openlibrary.org/developers/api
 
     Args:
-        query_string (str): Die Zeichenkette mit Titel, Author, etc. des Buches, nach dem gesucht werden soll.
-        language (str): Die Sprache des Buches (Standard: "de").
+        query_string (str): The string with title, author, etc. of the book to search for.
+        language (str): The language of the book (default: "de").
     
     Returns:
-        dict: Ein Dictionary mit Buchdetails (Titel, Autoren, Jahr, ISBN) oder None, wenn kein Buch gefunden wurde.
+        dict: A dictionary with book details (title, authors, year, ISBN) or None if no book was found.
     """
 
-    if not query_string:  # Überprüfen, ob der Titel leer oder None ist
-        logger.info("Kein Titel angegeben. Überspringe Lookup in OpernLibrary.")
+    if not query_string:  # Check if the title is empty or None
+        logger.info("No title provided. Skipping OpenLibrary lookup.")
         return None
     
-    logger.info("🔎 Suche mit OpenLibrary...")
+    logger.info("🔎 Searching with OpenLibrary...")
 
     base_url = "https://openlibrary.org/search.json"
     params = {
         "q": query_string,
         "lang": language,
-        "limit": 1  # Nur das relevanteste Ergebnis zurückgeben
+        "limit": 1  # Return only the most relevant result
     }
 
     try:
         response = requests.get(base_url, params=params, timeout=10)
-        response.raise_for_status()  # Fehler bei HTTP-Statuscodes auslösen
+        response.raise_for_status()  # Raise error for HTTP status codes
         data = response.json()
 
         if "docs" in data and len(data["docs"]) > 0:
-            book = data["docs"][0]  # Das erste Ergebnis nehmen
+            book = data["docs"][0]  # Take the first result
             return {
                 "title": book.get("title", "Unbekannt"),
                 "authors": ", ".join(book.get("author_name", ["Unbekannt"])),
@@ -101,21 +101,21 @@ def search_openlibrary(query_string, language="de"):
                 "isbn": book.get("isbn", ["Unbekannt"])[0] if "isbn" in book else "Unbekannt"
             }
         else:
-            logger.info(f"⚠️ Kein Buch gefunden für Query: {query_string}")
+            logger.info(f"⚠️ No book found for query: {query_string}")
             return None
 
     except requests.RequestException as e:
-        logger.error(f"❌ Fehler bei OpenLibrary-Anfrage: {e}")
+        logger.error(f"❌ Error in OpenLibrary request: {e}")
         return None
 
 
 def search_lobid_gnd_work(query_string):
     
     if not query_string:
-        logger.info("Kein Titel angegeben. Überspringe Lookup in lobid-GND.")
+        logger.info("No title provided. Skipping lobid-GND lookup.")
         return None
 
-    logger.info("🔎 Suche mit lobid GND (Work)...")
+    logger.info("🔎 Searching with lobid GND (Work)...")
 
     try:
         base_url = "https://lobid.org/gnd/search"
@@ -145,31 +145,31 @@ def search_lobid_gnd_work(query_string):
                 "wikidata": wikidata_link or "Unbekannt"
             }
         else:
-            logger.info(f"⚠️ Kein Buch gefunden für Query: {query_string}")
+            logger.info(f"⚠️ No book found for query: {query_string}")
             return None
 
     except Exception as e:
-        logger.error(f"❌ Fehler bei lobid-GND-Anfrage: {e}")
+        logger.error(f"❌ Error in lobid-GND request: {e}")
         return None
 
 
 def lookup_book_details(query_string, language="de"):
     
     if not query_string:
-        logger.info("Kein Titel angegeben. Überspringe Lookup.")
+        logger.info("No title provided. Skipping lookup.")
         return None
 
-    # Zuerst DNB SRU versuchen
+    # Try DNB SRU first
     result = search_dnb(query_string)
     if result:
         return result
 
     # Fallback: OpenLibrary
-    logger.info("🔄 Fallback: Suche mit OpenLibrary...")
+    logger.info("🔄 Fallback: Searching with OpenLibrary...")
     result = search_openlibrary(query_string, language)
     if result:
         return result
 
-    # Optional: lobid GND ergänzend (Normdaten)
-    logger.info("🔄 Zusatzversuch mit lobid GND (Normdaten)...")
+    # Optional: lobid GND supplementary (authority data)
+    logger.info("🔄 Additional attempt with lobid GND (authority data)...")
     return search_lobid_gnd_work(query_string)

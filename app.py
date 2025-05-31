@@ -27,7 +27,7 @@ from libs.run_manager import RunManager
 import config
 
 
-# Modul-spezifischer Logger
+# Module-specific logger that uses the module name as a prefix for log messages
 logger = get_logger(__name__)
 
 class BooksOnShelvesApp(Flask):
@@ -50,11 +50,11 @@ class BooksOnShelvesApp(Flask):
         self.route("/runs")(self.get_runs)
         self.route("/runs/<run_id>/bookspines")(self.get_bookspines)
 
-        # Thread-Lock für die Output Directory Erstellung
+        # Thread-Lock for creating output directories
         self._output_dir_lock = threading.Lock()
 
     def __get_next_output_directory(self):
-        """Thread-safe Methode zur Erstellung des nächsten Output Directories."""
+        """Thread-safe method to create the next output directory."""
         with self._output_dir_lock:
             output_dir = get_next_directory(config.OUTPUT_DIR)
             os.makedirs(os.path.join(output_dir, "book"), exist_ok=True)
@@ -72,7 +72,7 @@ class BooksOnShelvesApp(Flask):
             debug = request.form.get("debug", "0")
             
             if not source:
-                return jsonify({"error": "Keine Quelle angegeben"}), 400
+                return jsonify({"error": "No source given"}), 400
 
             try:
                 output_dir = self.__get_next_output_directory()
@@ -97,7 +97,7 @@ class BooksOnShelvesApp(Flask):
                     debug=int(debug)
                 )
                 
-                logger.info("🔍 Starte Bucherkennung...")
+                logger.info("🔍 Starting book detection...")
                 finder_thread.start()
 
                 # Watch for the thread to end
@@ -105,45 +105,45 @@ class BooksOnShelvesApp(Flask):
                     finder_thread.join()
                     # Stop the run when the thread is done
                     self.run_manager.stop_run(run_context.run_id)
-                    logger.info("✅ Bucherkennung abgeschlossen")
+                    logger.info("✅ Book detection finished.")
                     
                 threading.Thread(target=watcher, daemon=True).start()
 
-                # Weiterleitung zur /run-Route mit Run-ID als Query-Parameter
+                # Redirect to /run-Route with Run ID as query parameter
                 return redirect(f"/run?run_id={run_context.run_id}")
             except Exception as e:
-                logging.error(f"Fehler beim Starten der Bucherkennung: {str(e)}")
+                logging.error(f"Error during startup of book detection: {str(e)}")
                 return jsonify({"error": str(e)}), 500
                 
         # GET request
         run_id = request.args.get('run_id')
         if not run_id:
-            return jsonify({"error": "Keine Run-ID angegeben"}), 400
+            return jsonify({"error": "No Run ID provided"}), 400
         return render_template("run.html", run_id=run_id)
 
     def get_runs(self):
-        """Gibt eine Liste aller Runs zurück."""
+        """Returns a list of all runs."""
         try:
             runs = self.db_manager.get_all_runs()
             return jsonify({"runs": runs})
         except Exception as e:
-            logging.error(f"Fehler beim Abrufen der Runs: {str(e)}")
+            logging.error(f"Error on retrieving runs: {str(e)}")
             return jsonify({"error": str(e)}), 500
 
     def get_bookspines(self, run_id):
-        """Gibt alle Detections für einen bestimmten Run zurück."""
+        """Returns all detected bookspines for a specific run."""
         try:
             bookspines = self.db_manager.get_bookspines_for_run(run_id)
             return jsonify(bookspines)
         except Exception as e:
-            logging.error(f"Fehler beim Abrufen der Detections: {str(e)}")
+            logging.error(f"Error on retrieving bookspines: {str(e)}")
             return jsonify({"error": str(e)}), 500
 
 
-# Signal-Handler für SIGINT registrieren
+# Register signal handler for SIGINT when app is shut down using Ctrl/Cmd-C
 def handle_sigint(signal_received, frame):
     """Handles SIGINT (Ctrl-C) to clean up resources."""
-    logging.info("Ausführung unterbrochen. Geben Ressourcen frei...")
+    logging.info("Execution interrupted. Freeing resources...")
     
     if hasattr(flask_app, 'run_manager'):
         flask_app.run_manager.cleanup()
@@ -151,7 +151,7 @@ def handle_sigint(signal_received, frame):
     if hasattr(flask_app, 'socket_manager'):
         flask_app.socket_manager.teardown()
     
-    flask_app.logger.info("📘 Bookfinder Server heruntergefahren.")
+    flask_app.logger.info("📘 Bookfinder Server stopped.")
     exit(0)
 
 signal.signal(signal.SIGINT, handle_sigint)
@@ -160,6 +160,6 @@ signal.signal(signal.SIGINT, handle_sigint)
 if __name__ == '__main__':
     flask_app = BooksOnShelvesApp(__name__)
     
-    flask_app.logger.info("📘 Bookfinder Server startet auf und hört auf Anfragen unter http://0.0.0.0:5010")
+    flask_app.logger.info("📘 Bookfinder Server started and listens for requests on http://0.0.0.0:5010")
     flask_app.socket_manager.run_server(flask_app, host='0.0.0.0', port=5010)
 

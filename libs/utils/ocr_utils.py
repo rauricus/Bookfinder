@@ -11,7 +11,7 @@ import pytesseract
 
 import config
 
-# Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
+# Module-specific logger that uses the module name as prefix for log messages
 logger = get_logger(__name__)
 
 def initialize():
@@ -75,7 +75,7 @@ def detect_text_regions(image, east_model, min_confidence=0.5, nms_threshold=0.8
     """
     Detects text regions in an image using the EAST text detector with debugging.
     """
-        # Grab image dimensions
+    # Grab image dimensions
     (H, W) = image.shape[:2]
 
     # Define the new width and height for the image (must be multiples of 32)

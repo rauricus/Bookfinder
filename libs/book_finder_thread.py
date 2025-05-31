@@ -8,23 +8,23 @@ from libs.logging import (
     EventType, DetectionEvent, RunStatusEvent
 )
 
-# Modul-spezifischer Logger
+# Module-specific logger
 logger = get_logger(__name__)
 
 class BookFinderThread(threading.Thread):
     """
-    Ein Thread, der den BookFinder ausführt und das Logging über das neue Event-System handhabt.
+    A thread that runs the BookFinder and handles logging through the new event system.
     """
     
     def __init__(self, app: Flask, source: str = None, output_dir: str = None, run_context=None, debug: int = 0):
         """
-        Initialisiert den BookFinderThread.
+        Initializes the BookFinderThread.
         
         Args:
-            app (Flask): Die Flask-App
-            source (str, optional): Der Pfad zum Bild oder Video
-            run_context (RunContext): Der RunContext mit run_id und output_dir
-            debug (int, optional): Der Debug-Level
+            app (Flask): The Flask app
+            source (str, optional): The path to the image or video
+            run_context (RunContext): The RunContext with run_id and output_dir
+            debug (int, optional): The debug level
         """
         super().__init__()
         self.source = source
@@ -33,19 +33,19 @@ class BookFinderThread(threading.Thread):
         self.debug = debug
         self.socket_manager = app.socket_manager
 
-        # BookFinder mit dem RunContext und Debug-Level initialisieren
+        # Initialize BookFinder with the RunContext and debug level
         self.book_finder = BookFinder(
             run=self.run_context,
             output_dir=self.output_dir,
             debug=self.debug
         )
         
-        # Callback für Detections mit dem neuen Event-System
+        # Callback for detections with the new event system
         self.book_finder.on_detection = self._handle_detection
 
     def _handle_detection(self, bookspine_data):
         """
-        Verarbeitet eine neue Detection mit dem typisierten Event-System.
+        Processes a new detection with the typed event system.
         """
         event = DetectionEvent(
             id=bookspine_data.get('id'),
@@ -61,12 +61,12 @@ class BookFinderThread(threading.Thread):
 
     def run(self):
         """
-        Führt den BookFinder in einem separaten Thread aus.
+        Runs the BookFinder in a separate thread.
         """
-        # Verwende den RunLogContext für alle Logging-Aufrufe in diesem Thread
+        # Use the RunLogContext for all logging calls in this thread
         with RunLogContext(self.run_context.run_id):
             try:
-                # Sende Start-Status
+                # Send start status
                 self.socket_manager.emit_event(
                     event_type=EventType.RUN_STATUS,
                     event_data=RunStatusEvent(status="starting"),
@@ -75,7 +75,7 @@ class BookFinderThread(threading.Thread):
                 
                 self.book_finder.findBooks(self.source)
                 
-                # Sende Erfolgs-Status
+                # Send success status
                 self.socket_manager.emit_event(
                     event_type=EventType.RUN_STATUS,
                     event_data=RunStatusEvent(status="completed"),
@@ -83,12 +83,12 @@ class BookFinderThread(threading.Thread):
                 )
                 
             except Exception as e:
-                # Sende Fehler-Status
+                # Send error status
                 self.socket_manager.emit_event(
                     event_type=EventType.RUN_STATUS,
                     event_data=RunStatusEvent(status="error", message=str(e)),
                     namespace=f'/run_{self.run_context.run_id}'
                 )
                 
-                logger.error(f"❌ Fehler bei der Bucherkennung: {str(e)}")
+                logger.error(f"❌ Error during book detection: {str(e)}")
                 raise

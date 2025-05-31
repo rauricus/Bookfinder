@@ -3,39 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Find Books</title>
+    <title>Bücher finden</title>
 </head>
 <body>
-    <h1>Find Books</h1>
+    <h1>Bücher finden</h1>
     <form action="/run" method="post">
-        <label for="source">Source (Path to image or video):</label>
+        <label for="source">Quelle (Pfad zu Bild oder Video):</label>
         <input type="text" id="source" name="source" required>
         <br><br>
-        <label for="debug">Debug Level:</label>
+        <label for="debug">Debug-Level:</label>
         <select id="debug" name="debug">
-            <option value="0" selected>No debug output</option>
-            <option value="1">Show detection details (Level 1)</option>
+            <option value="0" selected>Keine Debug-Ausgabe</option>
+            <option value="1">Details der Bucherkennung zeigen (Level 1)</option>
         </select>
         <br><br>
-        <button type="submit">Run</button>
+        <button type="submit">Ausführen</button>
     </form>
 
-    <h2>Run History</h2>
+    <h2>Frühere Bucherkennungen</h2>
     <table border="1">
         <thead>
             <tr>
                 <th>Run ID</th>
-                <th>Start Time</th>
-                <th>End Time</th>
-                <th>Books Detected</th>
+                <th>Startzeit</th>
+                <th>Endzeit</th>
+                <th>Anzahl Bücher</th>
                 <th>Status</th>
-                <th>Input File</th>
-                <th>Output Dir</th>
+                <th>Eingabedatei</th>
+                <th>Ausgabeverzeichnis</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td colspan="5" style="text-align: center;">Fetching runs...</td>
+                <td colspan="5" style="text-align: center;">Runs werden abgerufen...</td>
             </tr>
         </tbody>
     </table>

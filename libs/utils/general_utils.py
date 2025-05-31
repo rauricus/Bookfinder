@@ -3,7 +3,7 @@ import config
 
 from libs.logging import get_logger
 
-# Modul-spezifischer Logger, der den Modulnamen als Präfix für Log-Nachrichten nutzt
+# Module-specific logger that uses the module name as prefix for log messages
 logger = get_logger(__name__)
 
 def initialize():

@@ -68,7 +68,7 @@ class RunContext:
 class DatabaseManager:
     def __init__(self, db_path):
         self.db_path = db_path
-        self._initialize_tables()  # Initialisiere Tabellen direkt beim Erstellen
+        self._initialize_tables()  # Initialise tables right during startup.
 
     def _connect(self):
         return sqlite3.connect(self.db_path)
