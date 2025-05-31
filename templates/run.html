@@ -51,12 +51,42 @@
             height: 70vh;
             overflow-y: scroll;
         }
-        .bookspine-item {
+        .bookspine-container {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .bookspine-header {
             padding: 10px;
-            margin: 5px 0;
+            background-color: #f0f0f0;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .bookspine-header:hover {
+            background-color: #e8e8e8;
+        }
+        .bookspine-variants {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+        }
+        .variant-item {
+            flex: 1;
+            min-width: 300px;
+            padding: 10px;
             background-color: #fff;
             border: 1px solid #eee;
             border-radius: 4px;
+        }
+        .variant-item img {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+            margin-top: 10px;
+            border: 1px solid #eee;
         }
         .placeholder {
             text-align: center;
@@ -76,6 +106,12 @@
             border-bottom: 1px solid #ccc;
             margin-bottom: 10px;
             padding-bottom: 10px;
+        }
+        .book-details {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -145,23 +181,76 @@
             }
         });
 
+        // Helper function to format book details
+        function formatBookDetails(details) {
+            let formattedDetails = '';
+            for (const [key, value] of Object.entries(details)) {
+                formattedDetails += `${key}: ${value}<br>`;
+            }
+            return formattedDetails;
+        }
+
         socket.on('detection', (data) => {
-            const bookspineDiv = document.createElement('div');
-            bookspineDiv.className = 'bookspine-item';
+            // Hide placeholder if we have bookspines
+            bookspinesPlaceholder.style.display = 'none';
             
-            let details = '';
-            if (data.book_details) {
-                details = `<br>Details: ${JSON.stringify(data.book_details, null, 2)}`;
+            // Check if this bookspine container already exists
+            let bookspineContainer = document.getElementById(`bookspine-${data.id}`);
+            
+            if (!bookspineContainer) {
+                // Create new bookspine container
+                bookspineContainer = document.createElement('div');
+                bookspineContainer.id = `bookspine-${data.id}`;
+                bookspineContainer.className = 'bookspine-container';
+                
+                // Create header
+                const header = document.createElement('div');
+                header.className = 'bookspine-header';
+                header.textContent = `Bücherrücken #${data.id}`;
+                
+                // Create variants container
+                const variantsContainer = document.createElement('div');
+                variantsContainer.className = 'bookspine-variants';
+                variantsContainer.id = `variants-${data.id}`;
+                
+                // Add to DOM
+                bookspineContainer.appendChild(header);
+                bookspineContainer.appendChild(variantsContainer);
+                bookspinesList.appendChild(bookspineContainer);
             }
             
-            bookspineDiv.innerHTML = `
-                <strong>Detection ${data.id}</strong><br>
+            // Get the variants container
+            const variantsContainer = document.getElementById(`variants-${data.id}`);
+            
+            // Create variant item
+            const variantDiv = document.createElement('div');
+            variantDiv.className = 'variant-item';
+            
+            // Determine if this is the original or rotated image
+            const isRotated = data.image_path.includes('rotated-180');
+            const variantType = isRotated ? 'Rotiert (180°)' : 'Original';
+            
+            let variantContent = `
+                <strong>${variantType}</strong><br>
                 Bild: ${data.image_path}<br>
                 Titel: ${data.title || 'Kein Titel erkannt'}
-                ${details}
             `;
-            bookspinesList.appendChild(bookspineDiv);
-            bookspinesPlaceholder.style.display = 'none';
+            
+            // Add book details if available
+            if (data.book_details) {
+                variantContent += `
+                    <div class="book-details">
+                        <strong>Buchdetails:</strong><br>
+                        ${formatBookDetails(data.book_details)}
+                    </div>
+                `;
+            }
+            
+            // Add image preview
+            variantContent += `<img src="/${data.image_path}" alt="${data.title || 'Buchbild'}" />`;
+            
+            variantDiv.innerHTML = variantContent;
+            variantsContainer.appendChild(variantDiv);
         });
 
         socket.on('run_status', (data) => {
