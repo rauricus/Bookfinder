@@ -81,11 +81,11 @@
 </head>
 <body>
     <a href="/" class="back-link">← Zurück zur Übersicht</a>
-    <h1>Book Detection Run #{{ run_id }}</h1>
+    <h1>Bucherkennung Run #{{ run_id }}</h1>
     <div class="status" id="run-status"></div>
     <div>
         <div class="tab active" id="log-tab">Log</div>
-        <div class="tab" id="bookspines-tab">Detections</div>
+        <div class="tab" id="bookspines-tab">Bücherrücken</div>
     </div>
     <div class="tab-content active" id="log-content">
         {% if log_content %}
@@ -98,7 +98,7 @@
     </div>
     <div class="tab-content" id="bookspines-content">
         <div id="bookspines-list"></div>
-        <div id="bookspines-placeholder" class="placeholder">Noch keine Detections vorhanden...</div>
+        <div id="bookspines-placeholder" class="placeholder">Noch keine Bücherrücken gefunden...</div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
@@ -145,7 +145,7 @@
             }
         });
 
-        socket.on('bookspine', (data) => {
+        socket.on('detection', (data) => {
             const bookspineDiv = document.createElement('div');
             bookspineDiv.className = 'bookspine-item';
             
