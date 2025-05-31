@@ -27,7 +27,8 @@ class RunEventHandler:
             id=bookspine_data['id'],
             image_path=bookspine_data['image_path'],
             title=bookspine_data.get('title'),
-            book_details=bookspine_data.get('book_details')
+            book_details=bookspine_data.get('book_details'),
+            source=bookspine_data.get('source')
         )
         self.socket_manager.emit_event(EventType.DETECTION, event, self.namespace)
         

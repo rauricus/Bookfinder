@@ -62,8 +62,63 @@ class RunContext:
             """,
             (bookspine_id, image_path, best_title),
         )
+        variant_id = cursor.lastrowid
         conn.commit()
         conn.close()
+        return variant_id
+        
+    def log_book_lookup(self, bookspine_variant_id, source, book_details, raw_response=None):
+        """
+        Log the results of a book lookup to the database.
+        
+        Args:
+            bookspine_variant_id: ID of the bookspine variant that triggered the lookup
+            source: Source of the lookup (e.g., 'DNB', 'OpenLibrary', 'lobid_GND')
+            book_details: Dictionary containing book details
+            raw_response: Optional raw response data as string (e.g., JSON)
+        
+        Returns:
+            ID of the created book lookup record
+        """
+        if not book_details:
+            return None
+            
+        conn = self._connect()
+        cursor = conn.cursor()
+        
+        # Extract fields from book_details based on the source
+        # Use None (NULL in SQLite) for missing values instead of 'Unbekannt'
+        title = book_details.get('title')
+        authors = book_details.get('authors', book_details.get('author'))
+        year = book_details.get('year')
+        isbn = book_details.get('isbn')
+        gnd_identifier = book_details.get('gndIdentifier')
+        wikidata_link = book_details.get('wikidata')
+        lobid_id = book_details.get('id')
+        
+        # Convert raw_response to string if it's a dictionary
+        if isinstance(raw_response, dict):
+            import json
+            raw_response = json.dumps(raw_response)
+        
+        cursor.execute(
+            """
+            INSERT INTO book_lookups (
+                bookspine_variant_id, source, title, authors, year, isbn,
+                gnd_identifier, wikidata_link, lobid_id, raw_response
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                bookspine_variant_id, source, title, authors, year, isbn,
+                gnd_identifier, wikidata_link, lobid_id, raw_response
+            ),
+        )
+        
+        lookup_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return lookup_id
 
 class DatabaseManager:
     def __init__(self, db_path):
@@ -108,6 +163,24 @@ class DatabaseManager:
                 created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (bookspine_id) REFERENCES bookspines (id)
+            )
+        """)
+        
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS book_lookups (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                bookspine_variant_id INTEGER NOT NULL,
+                source TEXT NOT NULL,
+                title TEXT,
+                authors TEXT,
+                year TEXT,
+                isbn TEXT,
+                gnd_identifier TEXT,
+                wikidata_link TEXT,
+                lobid_id TEXT,
+                raw_response TEXT,
+                created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (bookspine_variant_id) REFERENCES bookspine_variants (id)
             )
         """)
 
@@ -165,7 +238,7 @@ class DatabaseManager:
         return [dict(id=row[0], run_id=row[1], data=row[2]) for row in rows]
         
     def get_bookspines_for_run(self, run_id):
-        """Retrieve all bookspines with their variants for a specific run."""
+        """Retrieve all bookspines with their variants and book lookups for a specific run."""
         conn = self._connect()
         cursor = conn.cursor()
         
@@ -189,12 +262,38 @@ class DatabaseManager:
             
             variants = []
             for variant_row in cursor.fetchall():
+                variant_id = variant_row[0]
+                
+                # Get all book lookups for this variant
+                cursor.execute("""
+                    SELECT id, source, title, authors, year, isbn, 
+                           gnd_identifier, wikidata_link, lobid_id, created
+                    FROM book_lookups
+                    WHERE bookspine_variant_id = ?
+                """, (variant_id,))
+                
+                lookups = []
+                for lookup_row in cursor.fetchall():
+                    lookups.append({
+                        'id': lookup_row[0],
+                        'source': lookup_row[1],
+                        'title': lookup_row[2],
+                        'authors': lookup_row[3],
+                        'year': lookup_row[4],
+                        'isbn': lookup_row[5],
+                        'gnd_identifier': lookup_row[6],
+                        'wikidata_link': lookup_row[7],
+                        'lobid_id': lookup_row[8],
+                        'created': lookup_row[9]
+                    })
+                
                 variants.append({
-                    'id': variant_row[0],
+                    'id': variant_id,
                     'image_path': variant_row[1],
                     'title': variant_row[2],
                     'created': variant_row[3],
-                    'updated': variant_row[4]
+                    'updated': variant_row[4],
+                    'lookups': lookups
                 })
             
             # Add bookspine with its variants to the result
@@ -208,6 +307,37 @@ class DatabaseManager:
         
         conn.close()
         return bookspines
+        
+    def get_book_lookups_for_variant(self, variant_id):
+        """Retrieve all book lookups for a specific bookspine variant."""
+        conn = self._connect()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, source, title, authors, year, isbn, 
+                   gnd_identifier, wikidata_link, lobid_id, raw_response, created
+            FROM book_lookups
+            WHERE bookspine_variant_id = ?
+        """, (variant_id,))
+        
+        lookups = []
+        for row in cursor.fetchall():
+            lookups.append({
+                'id': row[0],
+                'source': row[1],
+                'title': row[2],
+                'authors': row[3],
+                'year': row[4],
+                'isbn': row[5],
+                'gnd_identifier': row[6],
+                'wikidata_link': row[7],
+                'lobid_id': row[8],
+                'raw_response': row[9],
+                'created': row[10]
+            })
+        
+        conn.close()
+        return lookups
 
     def get_all_runs(self):
         """Retrieve all runs from the database with their details."""

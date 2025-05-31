@@ -137,6 +137,14 @@
             color: #888;
             font-style: italic;
         }
+        .book-lookup {
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -191,13 +199,31 @@
             logContent.classList.remove('active');
         });
 
-        // Helper function to format book details
-        function formatBookDetails(details) {
-            let formattedDetails = '';
-            for (const [key, value] of Object.entries(details)) {
-                formattedDetails += `${key}: ${value}<br>`;
+        // Function to add book lookup information to the details section
+        function addBookLookup(bookspineId, lookup) {
+            const detailsContainer = document.getElementById(`details-${bookspineId}`);
+            if (!detailsContainer) return;
+            
+            // Remove the "no details" message if it exists
+            if (detailsContainer.querySelector('.no-details')) {
+                detailsContainer.innerHTML = '';
             }
-            return formattedDetails;
+            
+            // Add the book details
+            const detailDiv = document.createElement('div');
+            detailDiv.className = 'book-detail';
+            detailDiv.innerHTML = `
+                <strong>Buchdetails:</strong><br>
+                Titel: ${lookup.title || 'Nicht verfügbar'}<br>
+                Autor(en): ${lookup.authors || 'Nicht verfügbar'}<br>
+                Jahr: ${lookup.year || 'Nicht verfügbar'}<br>
+                ISBN: ${lookup.isbn || 'Nicht verfügbar'}<br>
+                Quelle: ${lookup.source || 'Nicht verfügbar'}<br>
+                ${lookup.gnd_identifier ? `GND: ${lookup.gnd_identifier}<br>` : ''}
+                ${lookup.wikidata_link ? `Wikidata: ${lookup.wikidata_link}<br>` : ''}
+                ${lookup.lobid_id ? `Lobid ID: ${lookup.lobid_id}<br>` : ''}
+            `;
+            detailsContainer.appendChild(detailDiv);
         }
 
         // Function to add a bookspine to the UI
@@ -232,8 +258,18 @@
             bookspineContainer.appendChild(variantsContainer);
             bookspinesList.appendChild(bookspineContainer);
             
-            // Add variants if available
+            // Add book lookups if available (from any variant)
             if (bookspineData.variants && bookspineData.variants.length > 0) {
+                // Collect all lookups from all variants
+                bookspineData.variants.forEach(variant => {
+                    if (variant.lookups && variant.lookups.length > 0) {
+                        variant.lookups.forEach(lookup => {
+                            addBookLookup(bookspineData.id, lookup);
+                        });
+                    }
+                });
+                
+                // Add variants
                 bookspineData.variants.forEach(variant => {
                     addVariant(bookspineData.id, variant);
                 });
@@ -269,6 +305,8 @@
             
             // Add title
             variantContent += `<div class="variant-title">Titel: ${variantData.title || 'Kein Titel erkannt'}</div>`;
+            
+            // Lookup information is now displayed in the details section above
             
             variantDiv.innerHTML = variantContent;
             variantsContainer.appendChild(variantDiv);
@@ -365,21 +403,18 @@
                 
                 // If this detection has book details, add them to the details section
                 if (data.book_details) {
-                    const detailsContainer = document.getElementById(`details-${data.id}`);
-                    
-                    // Remove the "no details" message if it exists
-                    if (detailsContainer.querySelector('.no-details')) {
-                        detailsContainer.innerHTML = '';
-                    }
-                    
-                    // Add the book details
-                    const detailDiv = document.createElement('div');
-                    detailDiv.className = 'book-detail';
-                    detailDiv.innerHTML = `
-                        <strong>Buchdetails:</strong><br>
-                        ${formatBookDetails(data.book_details)}
-                    `;
-                    detailsContainer.appendChild(detailDiv);
+                    // Use the new addBookLookup function to add book details
+                    console.log("Detection data received:", data); // Debug log to see what's received
+                    addBookLookup(data.id, {
+                        source: data.source || 'Unbekannt',
+                        title: data.book_details.title,
+                        authors: data.book_details.authors || data.book_details.author,
+                        year: data.book_details.year,
+                        isbn: data.book_details.isbn,
+                        gnd_identifier: data.book_details.gndIdentifier,
+                        wikidata_link: data.book_details.wikidata,
+                        lobid_id: data.book_details.id
+                    });
                 }
                 
                 // Add the variant

@@ -51,7 +51,8 @@ class BookFinderThread(threading.Thread):
             id=bookspine_data.get('id'),
             image_path=bookspine_data.get('image_path'),
             title=bookspine_data.get('title'),
-            book_details=bookspine_data.get('book_details')
+            book_details=bookspine_data.get('book_details'),
+            source=bookspine_data.get('source')  # Include the source field
         )
         self.socket_manager.emit_event(
             event_type=EventType.DETECTION,

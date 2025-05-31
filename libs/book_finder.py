@@ -177,17 +177,42 @@ class BookFinder:
                                 logger.info(f"📚 Best title: {best_title}")
 
                                 # Retrieve book details
-                                book_details = lookup_book_details(best_title)
+                                source, book_details = lookup_book_details(best_title)
+                                
+                                # Log the variant and get the variant ID
+                                variant_id = self.current_run.log_bookspine_variant(bookspine_id, variant_path, best_title)
+                                
+                                # Store book lookup results if found
                                 if book_details:
-                                    logger.info(f"📖 Gefundene Buchdetails: {book_details}")
-                                # Log the variant and send it to the callback
-                                self.current_run.log_bookspine_variant(bookspine_id, variant_path, best_title)
+                                    # Extract the raw response if available
+                                    raw_response = None
+                                    if "_raw_response" in book_details:
+                                        raw_response = book_details.pop("_raw_response")
+                                    
+                                    # Log only basic fields, not the full details
+                                    basic_info = {
+                                        'title': book_details.get('title'),
+                                        'authors': book_details.get('authors', book_details.get('author'))
+                                    }
+                                    logger.info(f"📖 Book details found in {source}: {basic_info}")
+                                    
+                                    # Store the lookup results in the database
+                                    lookup_id = self.current_run.log_book_lookup(
+                                        bookspine_variant_id=variant_id,
+                                        source=source,
+                                        book_details=book_details,
+                                        raw_response=raw_response
+                                    )
+                                    logger.debug(f"Stored book lookup with ID {lookup_id} from source {source}")
+                                
+                                # Send data to the callback if registered
                                 if self.on_detection:
                                     bookspine_data = {
                                         'id': bookspine_id,
                                         'image_path': variant_path,
                                         'title': best_title,
-                                        'book_details': book_details
+                                        'book_details': book_details,
+                                        'source': source if book_details else None
                                     }
                                     self.on_detection(bookspine_data)
 

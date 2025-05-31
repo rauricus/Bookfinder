@@ -24,6 +24,7 @@ class DetectionEvent:
     image_path: str
     title: Optional[str]
     book_details: Optional[Dict[str, Any]]
+    source: Optional[str] = None
 
 @dataclass
 class RunStatusEvent:

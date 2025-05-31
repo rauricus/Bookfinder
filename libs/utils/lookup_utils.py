@@ -31,6 +31,10 @@ def search_dnb(query_string, language="de"):
         }
         dnb_response = requests.get(dnb_url, params=dnb_params, timeout=10)
         dnb_response.raise_for_status()
+        
+        # Store the raw XML response as string
+        raw_response = dnb_response.content.decode('utf-8')
+        
         root = ET.fromstring(dnb_response.content)
         ns = {
             'dc': 'http://purl.org/dc/elements/1.1/',
@@ -48,12 +52,15 @@ def search_dnb(query_string, language="de"):
             logger.info(f"⚠️ No book found for query: {query_string}")
             return None
 
-        return {
-            "title": title_el.text if title_el is not None else "Unbekannt",
-            "authors": author_el.text if author_el is not None else "Unbekannt",
-            "year": year_el.text if year_el is not None else "Unbekannt",
-            "isbn": isbn_el.text if isbn_el is not None else "Unbekannt"
+        result = {
+            "title": title_el.text if title_el is not None else None,
+            "authors": author_el.text if author_el is not None else None,
+            "year": year_el.text if year_el is not None else None,
+            "isbn": isbn_el.text if isbn_el is not None else None,
+            "_raw_response": raw_response  # Include raw response
         }
+        
+        return result
 
     except Exception as e:
         logger.error(f"❌ Error in DNB request: {e}")
@@ -94,12 +101,19 @@ def search_openlibrary(query_string, language="de"):
 
         if "docs" in data and len(data["docs"]) > 0:
             book = data["docs"][0]  # Take the first result
-            return {
-                "title": book.get("title", "Unbekannt"),
-                "authors": ", ".join(book.get("author_name", ["Unbekannt"])),
-                "year": book.get("first_publish_year", "Unbekannt"),
-                "isbn": book.get("isbn", ["Unbekannt"])[0] if "isbn" in book else "Unbekannt"
+            
+            # Store the raw JSON response
+            import json
+            raw_response = json.dumps(data, ensure_ascii=False)  # Preserve UTF-8 characters
+            
+            result = {
+                "title": book.get("title"),
+                "authors": ", ".join(book.get("author_name", [])) if book.get("author_name") else None,
+                "year": book.get("first_publish_year"),
+                "isbn": book.get("isbn")[0] if "isbn" in book and book.get("isbn") else None,
+                "_raw_response": raw_response  # Include raw response
             }
+            return result
         else:
             logger.info(f"⚠️ No book found for query: {query_string}")
             return None
@@ -137,13 +151,20 @@ def search_lobid_gnd_work(query_string):
                 if link.startswith("http://www.wikidata.org/entity/"):
                     wikidata_link = link
                     break
-            return {
-                "id": entry.get("id", "Unbekannt"),
-                "title": entry.get("preferredName", "Unbekannt"),
-                "author": entry.get("firstAuthor", [{}])[0].get("label", "Unbekannt") if entry.get("firstAuthor") else "Unbekannt",
-                "gndIdentifier": entry.get("gndIdentifier", "Unbekannt"),
-                "wikidata": wikidata_link or "Unbekannt"
+                    
+            # Store the raw JSON response
+            import json
+            raw_response = json.dumps(data, ensure_ascii=False)  # Preserve UTF-8 characters
+            
+            result = {
+                "id": entry.get("id"),
+                "title": entry.get("preferredName"),
+                "author": entry.get("firstAuthor", [{}])[0].get("label") if entry.get("firstAuthor") else None,
+                "gndIdentifier": entry.get("gndIdentifier"),
+                "wikidata": wikidata_link,
+                "_raw_response": raw_response  # Include raw response
             }
+            return result
         else:
             logger.info(f"⚠️ No book found for query: {query_string}")
             return None
@@ -154,22 +175,37 @@ def search_lobid_gnd_work(query_string):
 
 
 def lookup_book_details(query_string, language="de"):
+    """
+    Lookup book details from multiple sources and return the first successful result.
+    
+    Args:
+        query_string (str): The query string to search for
+        language (str): The language code (default: "de")
+        
+    Returns:
+        tuple: (source, result) where source is the name of the source that provided the result
+               and result is the book details dictionary, or (None, None) if no results found
+    """
     
     if not query_string:
         logger.info("No title provided. Skipping lookup.")
-        return None
+        return None, None
 
     # Try DNB SRU first
     result = search_dnb(query_string)
     if result:
-        return result
+        return "DNB", result
 
     # Fallback: OpenLibrary
     logger.info("🔄 Fallback: Searching with OpenLibrary...")
     result = search_openlibrary(query_string, language)
     if result:
-        return result
+        return "OpenLibrary", result
 
     # Optional: lobid GND supplementary (authority data)
     logger.info("🔄 Additional attempt with lobid GND (authority data)...")
-    return search_lobid_gnd_work(query_string)
+    result = search_lobid_gnd_work(query_string)
+    if result:
+        return "lobid_GND", result
+        
+    return None, None
