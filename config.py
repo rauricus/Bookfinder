@@ -9,6 +9,10 @@ OUTPUT_DIR = os.path.join(HOME_DIR, "output/predict")
 # Supported languages
 SUPPORTED_LANGUAGES = ["de"]
 
+# OCR Settings for Swiss Market
+OCR_LANGUAGES = 'deu+eng'  # German + English covers most cases
+OCR_PSM_MODE = 6  # Uniform block of text (good for book spines)
+
 # Initialise the logging framework
 #
 #   The log level can be controlled via the LOG_LEVEL environment variable, and the log file

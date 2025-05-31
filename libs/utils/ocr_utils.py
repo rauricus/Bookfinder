@@ -18,16 +18,18 @@ def initialize():
     # Add any necessary initialization code here
     pass
 
-def ocr_onImage(image, east_model, debug=0):
+def ocr_onImage(image, east_model, debug=0, languages=None):
     """
     Perform OCR on an image, forcing horizontal text detection.
 
     Args:
         image_path (str): Path to the image for OCR.
         east_model (cv2.dnn_Net): The pre-trained EAST model
+        debug (int): Debug level for visualization
+        languages (str, optional): Language string for Tesseract. If None, uses config.OCR_LANGUAGES.
 
     Returns:
-        str: The OCR-detected text.
+        dict: OCR results for each detected text region.
     """
 
     # --- Detect text regions ---
@@ -60,8 +62,14 @@ def ocr_onImage(image, east_model, debug=0):
                 logger.warning("ESC key pressed. Aborting execution.")
                 return {}
 
-        # Perform OCR on the corrected region
-        ocr_text = pytesseract.image_to_string(processed_image, config="--psm 6")
+        # Perform OCR on the corrected region with language support
+        # Use config settings if languages parameter is None
+        lang_to_use = languages if languages is not None else config.OCR_LANGUAGES
+        ocr_text = pytesseract.image_to_string(
+            processed_image,
+            lang=lang_to_use,
+            config=f"--psm {config.OCR_PSM_MODE}"
+        )
 
         ocr_results[i] = ocr_text.strip()
 
