@@ -149,10 +149,10 @@
     <h1>Bucherkennung Run #{{ run_id }}</h1>
     <div class="status" id="run-status"></div>
     <div>
-        <div class="tab active" id="log-tab">Log</div>
-        <div class="tab" id="bookspines-tab">Bücherrücken</div>
+        <div class="tab active" id="bookspines-tab">Bücherrücken</div>
+        <div class="tab" id="log-tab">Log</div>
     </div>
-    <div class="tab-content active" id="log-content">
+    <div class="tab-content" id="log-content">
         {% if log_content %}
         <div id="historical-log">
             <pre>{{ log_content }}</pre>
@@ -161,7 +161,7 @@
         <pre id="log-container"></pre>
         <div id="log-placeholder" class="placeholder">Warte auf neue Logs...</div>
     </div>
-    <div class="tab-content" id="bookspines-content">
+    <div class="tab-content active" id="bookspines-content">
         <div id="bookspines-list"></div>
         <div id="bookspines-placeholder" class="placeholder">Noch keine Bücherrücken gefunden...</div>
     </div>
