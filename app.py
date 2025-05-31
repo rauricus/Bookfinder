@@ -50,6 +50,7 @@ class BooksOnShelvesApp(Flask):
         self.route("/runs")(self.get_runs)
         self.route("/runs/<run_id>/bookspines")(self.get_bookspines)
         self.route("/image/<run_id>")(self.serve_image)
+        self.route("/log/<run_id>")(self.get_log_content)
 
         # Thread-Lock for creating output directories
         self._output_dir_lock = threading.Lock()
@@ -67,6 +68,7 @@ class BooksOnShelvesApp(Flask):
 
 
     def run_page(self):
+        # POST request means we're starting a new run
         if request.method == 'POST':
             # Get parameters from the request
             source = request.form.get("source")
@@ -110,17 +112,65 @@ class BooksOnShelvesApp(Flask):
                     
                 threading.Thread(target=watcher, daemon=True).start()
 
-                # Redirect to /run-Route with Run ID as query parameter
-                return redirect(f"/run?run_id={run_context.run_id}")
+                # We use the Post/Redirect/Get (PRG) pattern here for several important reasons:
+                # 1. Prevents duplicate form submissions if the user refreshes the page
+                # 2. Allows proper browser history/bookmarking with the run_id in the URL
+                # 3. Follows REST principles (POST for creation, GET for retrieval)
+                # 
+                # We add the live=true parameter to indicate this is a new run that should
+                # be in live mode (with socket.io connection for auto-updates)
+                return redirect(f"/run?run_id={run_context.run_id}&live=true")
+                
+                # Alternative approach would be to render the template directly:
+                # return render_template("run.html", run_id=run_context.run_id, log_content="", view_mode=False)
+                # But this would cause issues with browser refreshes potentially starting new runs
             except Exception as e:
                 logging.error(f"Error during startup of book detection: {str(e)}")
                 return jsonify({"error": str(e)}), 500
                 
-        # GET request
-        run_id = request.args.get('run_id')
-        if not run_id:
-            return jsonify({"error": "No Run ID provided"}), 400
-        return render_template("run.html", run_id=run_id)
+        # GET request means we're viewing an existing run
+        else:
+            run_id = request.args.get('run_id')
+            if not run_id:
+                return jsonify({"error": "No Run ID provided"}), 400
+                
+            # Get run details from database
+            run_details = self.db_manager.get_run_details(run_id)
+            if not run_details:
+                return jsonify({"error": f"Run ID {run_id} not found"}), 404
+                
+            # Get log content for this run
+            log_content = ""
+            if run_details['output_dir']:
+                try:
+                    # Handle relative paths
+                    output_dir = run_details['output_dir']
+                    if not os.path.isabs(output_dir):
+                        output_dir = os.path.join(config.HOME_DIR, output_dir)
+                    
+                    # Use the specific log file naming convention: run_<run-id>.log
+                    log_path = os.path.join(output_dir, f"run_{run_id}.log")
+                    
+                    if os.path.exists(log_path) and os.path.isfile(log_path):
+                        with open(log_path, 'r') as f:
+                            log_content = f.read()
+                            logger.debug(f"Found log file: {log_path}")
+                    else:
+                        logger.warning(f"Log file not found: {log_path}")
+                except Exception as e:
+                    logger.error(f"Error reading log file: {str(e)}")
+            
+            # Check if this is a live run (new run) or a view of a past run
+            # If live=true is in the query parameters, this is a new run that should be in live mode
+            live_mode = request.args.get('live', 'false').lower() == 'true'
+            
+            # For GET requests, we're in view mode unless live=true is specified
+            view_mode = not live_mode
+            
+            logger.debug(f"Rendering run page for run {run_id} in {'view' if view_mode else 'live'} mode")
+                    
+            # Render the run page with run details, log content, and view mode
+            return render_template("run.html", run_id=run_id, log_content=log_content, view_mode=view_mode)
 
     def get_runs(self):
         """Returns a list of all runs."""
@@ -138,6 +188,39 @@ class BooksOnShelvesApp(Flask):
             return jsonify(bookspines)
         except Exception as e:
             logging.error(f"Error on retrieving bookspines: {str(e)}")
+            return jsonify({"error": str(e)}), 500
+            
+    def get_log_content(self, run_id):
+        """Returns the log content for a specific run."""
+        try:
+            # Get run details from database
+            run_details = self.db_manager.get_run_details(run_id)
+            if not run_details:
+                return jsonify({"error": f"Run ID {run_id} not found"}), 404
+                
+            # Check if output directory exists
+            if not run_details['output_dir']:
+                return jsonify({"error": "No output directory found for this run"}), 404
+                
+            # Handle relative paths
+            output_dir = run_details['output_dir']
+            if not os.path.isabs(output_dir):
+                output_dir = os.path.join(config.HOME_DIR, output_dir)
+                
+            # Use the specific log file naming convention: run_<run-id>.log
+            log_path = os.path.join(output_dir, f"run_{run_id}.log")
+            
+            if os.path.exists(log_path) and os.path.isfile(log_path):
+                with open(log_path, 'r') as f:
+                    log_content = f.read()
+                    logger.info(f"Found log file: {log_path}")
+                return jsonify({"log_content": log_content})
+            else:
+                logger.warning(f"Log file not found: {log_path}")
+                return jsonify({"error": "Log file not found"}), 404
+                
+        except Exception as e:
+            logging.error(f"Error retrieving log content: {str(e)}")
             return jsonify({"error": str(e)}), 500
             
     def serve_image(self, run_id):

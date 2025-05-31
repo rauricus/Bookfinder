@@ -121,11 +121,6 @@
             white-space: pre-wrap;
             word-wrap: break-word;
         }
-        #historical-log {
-            border-bottom: 1px solid #ccc;
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-        }
         .image-placeholder {
             width: 100%;
             height: 200px;
@@ -153,12 +148,7 @@
         <div class="tab" id="log-tab">Log</div>
     </div>
     <div class="tab-content" id="log-content">
-        {% if log_content %}
-        <div id="historical-log">
-            <pre>{{ log_content }}</pre>
-        </div>
-        {% endif %}
-        <pre id="log-container"></pre>
+        <pre id="log-container">{{ log_content }}</pre>
         <div id="log-placeholder" class="placeholder">Warte auf neue Logs...</div>
     </div>
     <div class="tab-content active" id="bookspines-content">
@@ -170,7 +160,9 @@
     <script>
         // Connect to the run-specific namespace
         const runId = '{{ run_id }}';
-        const socket = io('/run_' + runId);
+        // Use the view_mode variable set by the controller
+        const viewMode = {{ view_mode|tojson }};
+        let socket;
         
         // DOM Elements
         const logContainer = document.getElementById('log-container');
@@ -199,17 +191,6 @@
             logContent.classList.remove('active');
         });
 
-        // Event handlers
-        socket.on('log_message', (data) => {
-            const logEntry = `${data.timestamp} - ${data.level} - ${data.message}\n`;
-            logContainer.textContent += logEntry;
-            logContainer.scrollTop = logContainer.scrollHeight;
-            
-            if (logContainer.textContent.trim() !== '') {
-                logPlaceholder.style.display = 'none';
-            }
-        });
-
         // Helper function to format book details
         function formatBookDetails(details) {
             let formattedDetails = '';
@@ -219,79 +200,66 @@
             return formattedDetails;
         }
 
-        socket.on('detection', (data) => {
+        // Function to add a bookspine to the UI
+        function addBookspine(bookspineData) {
             // Hide placeholder if we have bookspines
             bookspinesPlaceholder.style.display = 'none';
             
-            // Check if this bookspine container already exists
-            let bookspineContainer = document.getElementById(`bookspine-${data.id}`);
+            // Create new bookspine container
+            const bookspineContainer = document.createElement('div');
+            bookspineContainer.id = `bookspine-${bookspineData.id}`;
+            bookspineContainer.className = 'bookspine-container';
             
-            if (!bookspineContainer) {
-                // Create new bookspine container
-                bookspineContainer = document.createElement('div');
-                bookspineContainer.id = `bookspine-${data.id}`;
-                bookspineContainer.className = 'bookspine-container';
-                
-                // Create header
-                const header = document.createElement('div');
-                header.className = 'bookspine-header';
-                header.textContent = `Bücherrücken #${data.id}`;
-                
-                // Create details container
-                const detailsContainer = document.createElement('div');
-                detailsContainer.className = 'bookspine-details';
-                detailsContainer.id = `details-${data.id}`;
-                detailsContainer.innerHTML = '<div class="no-details">Keine Buchdetails verfügbar</div>';
-                
-                // Create variants container
-                const variantsContainer = document.createElement('div');
-                variantsContainer.className = 'bookspine-variants';
-                variantsContainer.id = `variants-${data.id}`;
-                
-                // Add to DOM
-                bookspineContainer.appendChild(header);
-                bookspineContainer.appendChild(detailsContainer);
-                bookspineContainer.appendChild(variantsContainer);
-                bookspinesList.appendChild(bookspineContainer);
+            // Create header
+            const header = document.createElement('div');
+            header.className = 'bookspine-header';
+            header.textContent = `Bücherrücken #${bookspineData.id}`;
+            
+            // Create details container
+            const detailsContainer = document.createElement('div');
+            detailsContainer.className = 'bookspine-details';
+            detailsContainer.id = `details-${bookspineData.id}`;
+            detailsContainer.innerHTML = '<div class="no-details">Keine Buchdetails verfügbar</div>';
+            
+            // Create variants container
+            const variantsContainer = document.createElement('div');
+            variantsContainer.className = 'bookspine-variants';
+            variantsContainer.id = `variants-${bookspineData.id}`;
+            
+            // Add to DOM
+            bookspineContainer.appendChild(header);
+            bookspineContainer.appendChild(detailsContainer);
+            bookspineContainer.appendChild(variantsContainer);
+            bookspinesList.appendChild(bookspineContainer);
+            
+            // Add variants if available
+            if (bookspineData.variants && bookspineData.variants.length > 0) {
+                bookspineData.variants.forEach(variant => {
+                    addVariant(bookspineData.id, variant);
+                });
             }
-            
-            // If this detection has book details, add them to the details section
-            if (data.book_details) {
-                const detailsContainer = document.getElementById(`details-${data.id}`);
-                
-                // Remove the "no details" message if it exists
-                if (detailsContainer.querySelector('.no-details')) {
-                    detailsContainer.innerHTML = '';
-                }
-                
-                // Add the book details
-                const detailDiv = document.createElement('div');
-                detailDiv.className = 'book-detail';
-                detailDiv.innerHTML = `
-                    <strong>Buchdetails:</strong><br>
-                    ${formatBookDetails(data.book_details)}
-                `;
-                detailsContainer.appendChild(detailDiv);
-            }
-            
-            // Get the variants container
-            const variantsContainer = document.getElementById(`variants-${data.id}`);
+        }
+        
+        // Function to add a variant to a bookspine
+        function addVariant(bookspineId, variantData) {
+            const variantsContainer = document.getElementById(`variants-${bookspineId}`);
+            if (!variantsContainer) return;
             
             // Create variant item
             const variantDiv = document.createElement('div');
             variantDiv.className = 'variant-item';
             
             // Determine if this is the original or rotated image
-            const isRotated = data.image_path.includes('rotated-180');
+            const isRotated = variantData.image_path.includes('rotated-180');
             const variantType = isRotated ? 'Rotiert (180°)' : 'Original';
             
             // Create the variant content with image first, then type, then title
             let variantContent = '';
             
             // Add image placeholder with filename for debugging
-            const filename = data.image_path.split('/').pop();
+            const filename = variantData.image_path.split('/').pop();
             variantContent += `
-                <div class="image-placeholder" id="placeholder-${data.id}-${filename.replace(/\./g, '-')}">
+                <div class="image-placeholder" id="placeholder-${bookspineId}-${filename.replace(/\./g, '-')}">
                     Lade Bild: ${filename}...
                 </div>
             `;
@@ -300,18 +268,18 @@
             variantContent += `<div class="variant-type">${variantType}</div>`;
             
             // Add title
-            variantContent += `<div class="variant-title">Titel: ${data.title || 'Kein Titel erkannt'}</div>`;
+            variantContent += `<div class="variant-title">Titel: ${variantData.title || 'Kein Titel erkannt'}</div>`;
             
             variantDiv.innerHTML = variantContent;
             variantsContainer.appendChild(variantDiv);
             
             // Try to load the actual image after rendering the placeholder
-            const imageUrl = `/image/${runId}?path=${encodeURIComponent(data.image_path)}`;
+            const imageUrl = `/image/${runId}?path=${encodeURIComponent(variantData.image_path)}`;
             const img = new Image();
             
             img.onload = function() {
                 // Replace placeholder with actual image if it loads successfully
-                const placeholderId = `placeholder-${data.id}-${filename.replace(/\./g, '-')}`;
+                const placeholderId = `placeholder-${bookspineId}-${filename.replace(/\./g, '-')}`;
                 const placeholder = document.getElementById(placeholderId);
                 if (placeholder) {
                     placeholder.parentNode.replaceChild(img, placeholder);
@@ -326,7 +294,7 @@
             
             img.onerror = function() {
                 // If image fails to load, update the placeholder with an error message
-                const placeholderId = `placeholder-${data.id}-${filename.replace(/\./g, '-')}`;
+                const placeholderId = `placeholder-${bookspineId}-${filename.replace(/\./g, '-')}`;
                 const placeholder = document.getElementById(placeholderId);
                 if (placeholder) {
                     placeholder.textContent = 'Bild konnte nicht geladen werden';
@@ -336,35 +304,118 @@
             };
             
             img.src = imageUrl;
-            img.alt = data.title || 'Buchbild';
-        });
+            img.alt = variantData.title || 'Buchbild';
+        }
 
-        socket.on('run_status', (data) => {
-            let statusText = `Status: ${data.status} (${data.timestamp})`;
-            if (data.message) {
-                statusText += `\n${data.message}`;
+        // Function to load bookspines from the server for a previous run
+        async function loadBookspinesForRun() {
+            try {
+                const response = await fetch(`/runs/${runId}/bookspines`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const bookspines = await response.json();
+                
+                if (bookspines && bookspines.length > 0) {
+                    bookspines.forEach(bookspine => {
+                        addBookspine(bookspine);
+                    });
+                    bookspinesPlaceholder.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading bookspines:', error);
+                bookspinesPlaceholder.textContent = 'Fehler beim Laden der Bücherrücken';
             }
-            runStatus.textContent = statusText;
+        }
+
+        // Initialize based on view mode
+        if (viewMode) {
+            // In view mode, load bookspines from the server
+            loadBookspinesForRun();
             
-            if (data.status === 'completed') {
-                runStatus.style.backgroundColor = '#e8f5e9';  // Light green
-            } else if (data.status === 'error') {
-                runStatus.style.backgroundColor = '#ffebee';  // Light red
-            }
-        });
+            // Set status to completed
+            runStatus.textContent = 'Status: Abgeschlossen (Vorherige Ausführung)';
+            runStatus.style.backgroundColor = '#e8f5e9';  // Light green
+        } else {
+            // In live mode, connect to socket.io
+            socket = io('/run_' + runId);
+            
+            // Event handlers for socket events
+            socket.on('log_message', (data) => {
+                const logEntry = `${data.timestamp} - ${data.level} - ${data.message}\n`;
+                logContainer.textContent += logEntry;
+                logContainer.scrollTop = logContainer.scrollHeight;
+                
+                if (logContainer.textContent.trim() !== '') {
+                    logPlaceholder.style.display = 'none';
+                }
+            });
 
-        // Connection status handling
-        socket.on('connect', () => {
-            console.log('Connected to run namespace');
-        });
+            socket.on('detection', (data) => {
+                // Check if this bookspine container already exists
+                let bookspineContainer = document.getElementById(`bookspine-${data.id}`);
+                
+                if (!bookspineContainer) {
+                    // Create new bookspine
+                    addBookspine({
+                        id: data.id,
+                        variants: []
+                    });
+                }
+                
+                // If this detection has book details, add them to the details section
+                if (data.book_details) {
+                    const detailsContainer = document.getElementById(`details-${data.id}`);
+                    
+                    // Remove the "no details" message if it exists
+                    if (detailsContainer.querySelector('.no-details')) {
+                        detailsContainer.innerHTML = '';
+                    }
+                    
+                    // Add the book details
+                    const detailDiv = document.createElement('div');
+                    detailDiv.className = 'book-detail';
+                    detailDiv.innerHTML = `
+                        <strong>Buchdetails:</strong><br>
+                        ${formatBookDetails(data.book_details)}
+                    `;
+                    detailsContainer.appendChild(detailDiv);
+                }
+                
+                // Add the variant
+                addVariant(data.id, {
+                    image_path: data.image_path,
+                    title: data.title
+                });
+            });
 
-        socket.on('disconnect', () => {
-            console.log('Disconnected from run namespace');
-        });
+            socket.on('run_status', (data) => {
+                let statusText = `Status: ${data.status} (${data.timestamp})`;
+                if (data.message) {
+                    statusText += `\n${data.message}`;
+                }
+                runStatus.textContent = statusText;
+                
+                if (data.status === 'completed') {
+                    runStatus.style.backgroundColor = '#e8f5e9';  // Light green
+                } else if (data.status === 'error') {
+                    runStatus.style.backgroundColor = '#ffebee';  // Light red
+                }
+            });
 
-        socket.on('connect_error', (error) => {
-            console.error('Connection error:', error);
-        });
+            // Connection status handling
+            socket.on('connect', () => {
+                console.log('Connected to run namespace');
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected from run namespace');
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Connection error:', error);
+            });
+        }
     </script>
 </body>
 </html>

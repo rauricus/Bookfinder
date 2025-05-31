@@ -4,6 +4,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bücher finden</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        form {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            padding: 8px;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 500px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .run-link {
+            color: #2196F3;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .run-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
     <h1>Bücher finden</h1>
@@ -35,7 +98,7 @@
         </thead>
         <tbody>
             <tr>
-                <td colspan="5" style="text-align: center;">Runs werden abgerufen...</td>
+                <td colspan="7" style="text-align: center;">Runs werden abgerufen...</td>
             </tr>
         </tbody>
     </table>
@@ -53,7 +116,7 @@
                         const row = document.createElement('tr');
 
                         row.innerHTML = `
-                            <td>${run.run_id}</td>
+                            <td><a href="/run?run_id=${run.run_id}" class="run-link">${run.run_id}</a></td>
                             <td>${run.start_time}</td>
                             <td>${run.end_time || 'Läuft...'}</td>
                             <td>${run.books_detected || '0'}</td>

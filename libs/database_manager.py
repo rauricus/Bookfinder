@@ -163,6 +163,51 @@ class DatabaseManager:
         conn.close()
 
         return [dict(id=row[0], run_id=row[1], data=row[2]) for row in rows]
+        
+    def get_bookspines_for_run(self, run_id):
+        """Retrieve all bookspines with their variants for a specific run."""
+        conn = self._connect()
+        cursor = conn.cursor()
+        
+        # Get all bookspines for this run
+        cursor.execute("""
+            SELECT id, run_id, created, updated
+            FROM bookspines
+            WHERE run_id = ?
+        """, (run_id,))
+        
+        bookspines = []
+        for bookspine_row in cursor.fetchall():
+            bookspine_id = bookspine_row[0]
+            
+            # Get all variants for this bookspine
+            cursor.execute("""
+                SELECT id, image_path, best_title, created, updated
+                FROM bookspine_variants
+                WHERE bookspine_id = ?
+            """, (bookspine_id,))
+            
+            variants = []
+            for variant_row in cursor.fetchall():
+                variants.append({
+                    'id': variant_row[0],
+                    'image_path': variant_row[1],
+                    'title': variant_row[2],
+                    'created': variant_row[3],
+                    'updated': variant_row[4]
+                })
+            
+            # Add bookspine with its variants to the result
+            bookspines.append({
+                'id': bookspine_id,
+                'run_id': bookspine_row[1],
+                'created': bookspine_row[2],
+                'updated': bookspine_row[3],
+                'variants': variants
+            })
+        
+        conn.close()
+        return bookspines
 
     def get_all_runs(self):
         """Retrieve all runs from the database with their details."""
@@ -184,3 +229,28 @@ class DatabaseManager:
             'output_dir': row[4],
             'input_file': row[5]
         } for row in runs]
+        
+    def get_run_details(self, run_id):
+        """Retrieve details for a specific run."""
+        conn = self._connect()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, start_time, end_time, books_detected, output_dir, input_file
+            FROM runs
+            WHERE id = ?
+        """, (run_id,))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if not row:
+            return None
+            
+        return {
+            'run_id': row[0],
+            'start_time': row[1],
+            'end_time': row[2],
+            'books_detected': row[3],
+            'output_dir': row[4],
+            'input_file': row[5]
+        }
