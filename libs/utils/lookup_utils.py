@@ -1,6 +1,9 @@
+import re
 
 import requests
 import xml.etree.ElementTree as ET
+import json
+import urllib.parse
 
 from libs.utils.general_utils import iso639_1_to_3
 from libs.logging import get_logger
@@ -103,7 +106,6 @@ def search_openlibrary(query_string, language="de"):
             book = data["docs"][0]  # Take the first result
             
             # Store the raw JSON response
-            import json
             raw_response = json.dumps(data, ensure_ascii=False)  # Preserve UTF-8 characters
             
             result = {
@@ -123,8 +125,7 @@ def search_openlibrary(query_string, language="de"):
         return None
 
 
-def search_lobid_gnd_work(query_string):
-    
+def search_lobid_gnd_work(query_string, acceptable_authors=None):
     if not query_string:
         logger.info("No title provided. Skipping lobid-GND lookup.")
         return None
@@ -134,9 +135,10 @@ def search_lobid_gnd_work(query_string):
     try:
         base_url = "https://lobid.org/gnd/search"
         params = {
-            "q": query_string,
-            "filter": "type:Work",
-            "format": "json"
+            "q": f'"{query_string}" AND type:Work',
+            "filter": "+type:Work",
+            "format": "json",
+            "size": 10  # Get more results for better matching
         }
 
         response = requests.get(base_url, params=params, timeout=10)
@@ -144,43 +146,171 @@ def search_lobid_gnd_work(query_string):
         data = response.json()
 
         if data.get("member"):
+            # If acceptable_authors is given, filter for them
+            if acceptable_authors:
+                for entry in data["member"]:
+                    title = entry.get("preferredName", "")
+                    # Extract Wikidata ID
+                    wikidata_id = None
+                    for entry_link in entry.get("sameAs", []):
+                        link = entry_link.get("id", "")
+                        if "wikidata.org/entity/" in link:
+                            wikidata_id = link.split("/")[-1]
+                            break
+                    # Try to extract author from various fields
+                    author = None
+                    author_fields = ["firstAuthor", "author", "creator"]
+                    for field in author_fields:
+                        if entry.get(field):
+                            if isinstance(entry[field], list) and len(entry[field]) > 0:
+                                author = entry[field][0].get("label")
+                                break
+                            elif isinstance(entry[field], dict):
+                                author = entry[field].get("label")
+                                break
+                    # Return the first work with a matching author
+                    if author and any(a in author for a in acceptable_authors):
+                        return {
+                            "id": entry.get("id"),
+                            "title": title,
+                            "author": author,
+                            "gndIdentifier": entry.get("gndIdentifier"),
+                            "wikidata": wikidata_id,
+                            "_raw_response": json.dumps(data, ensure_ascii=False)
+                        }
+            # Fallback: return the first result (no author filtering)
             entry = data["member"][0]
-            wikidata_link = None
+            title = entry.get("preferredName", "")
+            wikidata_id = None
             for entry_link in entry.get("sameAs", []):
                 link = entry_link.get("id", "")
-                if link.startswith("http://www.wikidata.org/entity/"):
-                    wikidata_link = link
+                if "wikidata.org/entity/" in link:
+                    wikidata_id = link.split("/")[-1]
                     break
-                    
-            # Store the raw JSON response
-            import json
-            raw_response = json.dumps(data, ensure_ascii=False)  # Preserve UTF-8 characters
-            
-            result = {
+            author = None
+            author_fields = ["firstAuthor", "author", "creator"]
+            for field in author_fields:
+                if entry.get(field):
+                    if isinstance(entry[field], list) and len(entry[field]) > 0:
+                        author = entry[field][0].get("label")
+                        break
+                    elif isinstance(entry[field], dict):
+                        author = entry[field].get("label")
+                        break
+            return {
                 "id": entry.get("id"),
-                "title": entry.get("preferredName"),
-                "author": entry.get("firstAuthor", [{}])[0].get("label") if entry.get("firstAuthor") else None,
+                "title": title,
+                "author": author,
                 "gndIdentifier": entry.get("gndIdentifier"),
-                "wikidata": wikidata_link,
-                "_raw_response": raw_response  # Include raw response
+                "wikidata": wikidata_id,
+                "_raw_response": json.dumps(data, ensure_ascii=False)
             }
-            return result
-        else:
-            logger.info(f"⚠️ No book found for query: {query_string}")
-            return None
+        logger.info(f"⚠️ No book found for query: {query_string}")
+        return None
 
     except Exception as e:
         logger.error(f"❌ Error in lobid-GND request: {e}")
         return None
 
 
-def lookup_book_details(query_string, language="de"):
+def search_swisscovery(query_string, language="de"):
+    """
+    Search in swisscovery (SLSP) via SRU interface.
+    See: https://slsp.ch/metadaten/
+    """
+    if not query_string:
+        logger.info("No title provided. Skipping swisscovery lookup.")
+        return None
+    logger.info(f"🔎 Searching with swisscovery (SRU) for: {query_string}")
+    try:
+        base_url = "https://swisscovery.slsp.ch/view/sru/41SLSP_NETWORK"
+        params = {
+            "version": "1.2",
+            "operation": "searchRetrieve",
+            "query": f'title="{query_string}"',
+            "maximumRecords": "1",
+            "recordSchema": "marcxml"
+        }
+        # Log the full request URL for debugging
+        full_url = base_url + "?" + urllib.parse.urlencode(params)
+        logger.info(f"SRU-Request-URL: {full_url}")
+        response = requests.get(base_url, params=params, timeout=10)
+        response.raise_for_status()
+        xml_text = response.content.decode('utf-8')
+        logger.info(f"SRU-Response (first 500 chars): {xml_text[:500]}")
+        if '<?xml' not in xml_text:
+            xml_text = '<?xml version="1.0" encoding="UTF-8"?>\n' + xml_text
+        try:
+            root = ET.fromstring(xml_text)
+        except ET.ParseError as e:
+            logger.error(f"❌ XML Parse Error: {e}\nResponse: {xml_text[:500]}")
+            return None
+        ns = {
+            'marc': 'http://www.loc.gov/MARC21/slim',
+            'srw': 'http://www.loc.gov/zing/srw/',
+            'diag': 'http://www.loc.gov/zing/srw/diagnostic/'
+        }
+        # Check for diagnostics (error messages from the SRU API)
+        diag = root.find('.//srw:diagnostics', ns)
+        if diag is not None:
+            diag_msg = diag.find('.//diag:message', ns)
+            diag_uri = diag.find('.//diag:uri', ns)
+            logger.error(f"❌ SRU Diagnostic: {diag_msg.text if diag_msg is not None else ''} (Code: {diag_uri.text if diag_uri is not None else ''})\nResponse: {xml_text[:500]}")
+            return None
+        records = root.findall('.//marc:record', ns)
+        if not records:
+            logger.info(f"⚠️ No book found for query: {query_string}\nResponse: {xml_text[:500]}")
+            return None
+        record = records[0]
+        def get_marc_subfield(record, tag, code):
+            try:
+                # Extract MARC subfield value for a given tag and code
+                for field in record.findall(f".//marc:datafield[@tag='{tag}']", ns):
+                    for subfield in field.findall(f"marc:subfield[@code='{code}']", ns):
+                        if subfield.text and subfield.text.strip():
+                            return subfield.text.strip()
+            except Exception as e:
+                logger.warning(f"⚠️ Error extracting MARC field {tag}${code}: {e}")
+            return None
+        title = get_marc_subfield(record, '245', 'a')
+        author = get_marc_subfield(record, '100', 'a') or get_marc_subfield(record, '700', 'a')
+        year = (get_marc_subfield(record, '264', 'c') or get_marc_subfield(record, '260', 'c'))
+        isbn = get_marc_subfield(record, '020', 'a')
+        if isbn:
+            # Clean ISBN (remove non-numeric and non-X characters)
+            isbn = re.sub(r'[^0-9X]', '', isbn)
+            if len(isbn) >= 13 and isbn.startswith('97'):
+                isbn = isbn[:13]
+            else:
+                isbn = None
+        if year:
+            # Extract 4-digit year
+            year_match = re.search(r'\d{4}', year)
+            year = year_match.group(0) if year_match else None
+        result = {
+            "title": title,
+            "authors": author,
+            "year": year,
+            "isbn": isbn,
+            "_raw_response": xml_text
+        }
+        return result
+    except requests.RequestException as e:
+        logger.error(f"❌ Error in swisscovery request: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"❌ Error in swisscovery processing: {e}")
+        return None
+
+
+def lookup_book_details(query_string, language="de", market="CH"):
     """
     Lookup book details from multiple sources and return the first successful result.
     
     Args:
         query_string (str): The query string to search for
         language (str): The language code (default: "de")
+        market (str): Marktpräferenz, z.B. "CH" für Schweiz
         
     Returns:
         tuple: (source, result) where source is the name of the source that provided the result
@@ -191,8 +321,14 @@ def lookup_book_details(query_string, language="de"):
         logger.info("No title provided. Skipping lookup.")
         return None, None
 
-    # Try DNB SRU first
-    result = search_dnb(query_string)
+    # Für Schweizer Markt: Swisscovery zuerst
+    if market == "CH":
+        result = search_swisscovery(query_string, language)
+        if result:
+            return "Swisscovery", result
+
+    # Dann DNB
+    result = search_dnb(query_string, language)
     if result:
         return "DNB", result
 
@@ -207,5 +343,4 @@ def lookup_book_details(query_string, language="de"):
     result = search_lobid_gnd_work(query_string)
     if result:
         return "lobid_GND", result
-        
     return None, None
