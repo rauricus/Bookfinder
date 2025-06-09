@@ -51,9 +51,13 @@ The script first detects images of book spines in a photo (or a video stream). I
     * The basic text processing is inefficient: the set of accepted characters is computed several times.
     * The auto-correction of texts is always done with the German dictionary. It really should be language sensitive. (CHECK IF THIS IS STILL CORRECT)
     * The book titles in the book titles dictionary could come from EDITIONS in OpenLibrary, as those titles would be localized. This is due to many entries in OL being stored in English by default, but then their EDITIONS contain the actual, localized title. We can extract this in the future - it's too complex for now.
+* Book title lookup:
+    * Search in Swisscovery and Lobid GND often returns no results, because the book titles found on book spines often include the author names.
+        * We can maybe detect (and remove) author names by comparing them against our authors database.
+        * It would be nice to somehow detect author names because of their position and/or grouping on the book spine.
 
 ## Next steps
-* Look up book titles using a better source for German books. Or maybe only books that are more likely to be sold in Switzerland. We do get good titles sometimes, but then can't find those in the book title data set.
+* Improve book title lookup by trying to only look up by title.
 
 We can always improve text area detection and OCR later on. For now, it's more important to implement the whole pipeline to validate the approach.
 
