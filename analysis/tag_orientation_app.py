@@ -5,6 +5,8 @@ from PIL import Image, ImageTk
 import requests
 from dotenv import load_dotenv
 import argparse
+import time
+import sys
 
 # ==== Configuration ====
 
@@ -14,21 +16,92 @@ API_KEY = os.getenv("API_KEY")
 WORKSPACE = os.getenv("WORKSPACE")
 PROJECT = os.getenv("PROJECT")
 
+# ==== Retry mechanism ====
+
+def api_request_with_retry(request_func, max_retries=5, delay=1, debug=False):
+    """
+    Führt eine API-Anfrage mit Retry-Mechanismus aus.
+    
+    Args:
+        request_func: Funktion, die die HTTP-Anfrage durchführt
+        max_retries: Maximale Anzahl der Wiederholungen
+        delay: Wartezeit zwischen den Versuchen (in Sekunden)
+        debug: Debug-Modus
+        
+    Returns:
+        requests.Response object
+        
+    Raises:
+        SystemExit: Wenn alle Retry-Versuche fehlschlagen
+    """
+    last_exception = None
+    
+    for attempt in range(max_retries + 1):
+        try:
+            if debug and attempt > 0:
+                print(f"Debug: Retry attempt {attempt}/{max_retries}")
+            
+            response = request_func()
+            
+            # Prüfe auf HTTP-Fehler (4xx, 5xx)
+            if response.status_code >= 400:
+                if debug:
+                    print(f"Debug: HTTP error {response.status_code}, attempt {attempt + 1}/{max_retries + 1}")
+                if attempt < max_retries:
+                    time.sleep(delay * (attempt + 1))  # Exponential backoff
+                    continue
+                else:
+                    print(f"API request failed after {max_retries + 1} attempts. HTTP {response.status_code}: {response.text}")
+                    print("Stopping application due to persistent network issues.")
+                    sys.exit(1)
+            
+            return response
+            
+        except (requests.exceptions.RequestException, requests.exceptions.ConnectionError, 
+                requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
+            last_exception = e
+            if debug:
+                print(f"Debug: Network error on attempt {attempt + 1}/{max_retries + 1}: {e}")
+            
+            if attempt < max_retries:
+                time.sleep(delay * (attempt + 1))  # Exponential backoff
+            else:
+                print(f"Network request failed after {max_retries + 1} attempts. Last error: {e}")
+                print("Stopping application due to persistent network issues.")
+                sys.exit(1)
+        except Exception as e:
+            last_exception = e
+            if debug:
+                print(f"Debug: Unexpected error on attempt {attempt + 1}/{max_retries + 1}: {e}")
+            
+            if attempt < max_retries:
+                time.sleep(delay * (attempt + 1))
+            else:
+                print(f"Unexpected error after {max_retries + 1} attempts: {e}")
+                print("Stopping application due to persistent errors.")
+                sys.exit(1)
+    
+    # Sollte nie erreicht werden, aber als Fallback
+    print(f"Unexpected end of retry loop. Last error: {last_exception}")
+    sys.exit(1)
+
+
 # ==== Support functions ====
-
-
 def remove_tag(image_id, tag, debug=False):
     
     url_del = f"https://api.roboflow.com/{WORKSPACE}/{PROJECT}/images/{image_id}/tags"
     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
     data = {"operation": "remove", "tags": [tag]}
+    
     try:
         if debug:
             print(f"Debug: REMOVE text-tag: {tag}")
             print(f"Debug: URL: {url_del}")
             print(f"Debug: Headers: {headers}")
             print(f"Debug: Data: {data}")
-        r = requests.post(url_del, headers=headers, json=data)
+        
+        r = api_request_with_retry(lambda: requests.post(url_del, headers=headers, json=data), debug=debug)
+        
         if debug:
             print(f"Debug: REMOVE text-tag: {r.status_code} {r.text}")
         if r.status_code != 200:
@@ -37,6 +110,8 @@ def remove_tag(image_id, tag, debug=False):
             print(f"Tag '{tag}' removed successfully from image {image_id}.")
     except Exception as e:
         print(f"Error removing text-tag: {e}")
+        print("Stopping application due to unexpected error.")
+        sys.exit(1)
 
 
 def set_tag(image_id, tag, debug=False, last_tagged=None):
@@ -47,12 +122,15 @@ def set_tag(image_id, tag, debug=False, last_tagged=None):
     url = f"https://api.roboflow.com/{WORKSPACE}/{PROJECT}/images/{image_id}/tags"
     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
     data = {"operation": "add", "tags": [tag]}
+    
     try:
         if debug:
             print(f"Debug: URL: {url}")
             print(f"Debug: Headers: {headers}")
             print(f"Debug: Data: {data}")
-        r = requests.post(url, headers=headers, json=data)
+        
+        r = api_request_with_retry(lambda: requests.post(url, headers=headers, json=data), debug=debug)
+        
         if debug:
             print(f"Debug: Response status: {r.status_code}, Response body: {r.text}")
         # Check for errors in the response body
@@ -64,7 +142,8 @@ def set_tag(image_id, tag, debug=False, last_tagged=None):
         return r.status_code == 200
     except Exception as e:
         print(f"Error tagging: {e}")
-        return False
+        print("Stopping application due to unexpected error.")
+        sys.exit(1)
 
 
 def print_help():
@@ -94,38 +173,81 @@ def print_help():
 def get_images_without_text_tag(debug=False, limit=None):
     """
     Holt alle Bilder aus dem Projekt, die KEINEN Tag mit Prefix 'text-' haben.
+    Unterstützt Paginierung und wendet das Limit erst nach dem Filtern an.
     """
     url = f"https://api.roboflow.com/{WORKSPACE}/{PROJECT}/search"
     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
-    data = {
-        "fields": ["id", "name", "tags"],
-        # no 'tag' parameter, so we get ALL images
-    }
-    if limit is not None:
-        data["limit"] = limit
     
-    try:
-        if debug:
-            print(f"Debug: URL: {url}")
-            print(f"Debug: Headers: {headers}")
-            print(f"Debug: Data: {data}")
-        r = requests.post(url, headers=headers, json=data)
-        if debug:
-            print(f"Debug: Response status: {r.status_code}, Response body: {r.text}")
-        if r.status_code == 200:
-            response_json = r.json()
-            images = response_json.get("results", [])
-            # Filter: only images, which have no tag starting with "text-"
-            filtered = [img for img in images if not any(t.startswith("text-") for t in img.get("tags", []))]
+    all_filtered_images = []
+    offset = 0
+    page_size = 100
+    
+    while True:
+        data = {
+            "fields": ["id", "name", "tags"],
+            "limit": page_size,
+            "offset": offset
+        }
+        
+        try:
             if debug:
-                print(f"Debug: Found {len(filtered)} images without 'text-' tag.")
-            return filtered
-        else:
-            print(f"Error fetching images: {r.status_code} {r.text}")
-            return []
-    except Exception as e:
-        print(f"Error fetching images: {e}")
-        return []
+                print(f"Debug: Fetching page at offset {offset}")
+                print(f"Debug: URL: {url}")
+                print(f"Debug: Headers: {headers}")
+                print(f"Debug: Data: {data}")
+            
+            r = api_request_with_retry(lambda: requests.post(url, headers=headers, json=data), debug=debug)
+            
+            if debug:
+                print(f"Debug: Response status: {r.status_code}, Response body length: {len(r.text)}")
+            
+            if r.status_code == 200:
+                response_json = r.json()
+                images = response_json.get("results", [])
+                
+                if not images:
+                    # Keine weiteren Bilder vorhanden
+                    if debug:
+                        print(f"Debug: No more images at offset {offset}")
+                    break
+                
+                # Filter: only images, which have no tag starting with "text-"
+                filtered_page = [img for img in images if not any(t.startswith("text-") for t in img.get("tags", []))]
+                all_filtered_images.extend(filtered_page)
+                
+                if debug:
+                    print(f"Debug: Page {offset//page_size + 1}: {len(images)} total, {len(filtered_page)} filtered")
+                    print(f"Debug: Total filtered so far: {len(all_filtered_images)}")
+                
+                # Prüfe, ob das Limit bereits erreicht wurde
+                if limit is not None and len(all_filtered_images) >= limit:
+                    if debug:
+                        print(f"Debug: Limit of {limit} filtered images reached")
+                    all_filtered_images = all_filtered_images[:limit]
+                    break
+                
+                # Wenn weniger Bilder zurückgegeben wurden als erwartet, sind wir am Ende
+                if len(images) < page_size:
+                    if debug:
+                        print(f"Debug: Reached end of results (got {len(images)} < {page_size})")
+                    break
+                
+                offset += page_size
+                
+            else:
+                print(f"Error fetching images: {r.status_code} {r.text}")
+                print("Stopping application due to API error.")
+                sys.exit(1)
+                
+        except Exception as e:
+            print(f"Error fetching images: {e}")
+            print("Stopping application due to unexpected error.")
+            sys.exit(1)
+    
+    if debug:
+        print(f"Debug: Final result: {len(all_filtered_images)} images without 'text-' tag.")
+    
+    return all_filtered_images
 
 # ==== UI ====
 import tempfile
@@ -146,8 +268,9 @@ class TagApp:
         
         # 1. Fetch image details (contains 'image' with 'urls' and 'original')
         details_url = f"https://api.roboflow.com/{WORKSPACE}/{PROJECT}/images/{image_id}"
+        
         try:
-            r = requests.get(details_url, headers=headers)
+            r = api_request_with_retry(lambda: requests.get(details_url, headers=headers), debug=self.debug)
             if r.status_code != 200:
                 print(f"Error fetching image details {image_id}: {r.status_code}")
                 return None
@@ -162,7 +285,7 @@ class TagApp:
                 print(f"Image download url: {image_url}")
                 
             # 2. Fetch actual image
-            r_img = requests.get(image_url, stream=True)
+            r_img = api_request_with_retry(lambda: requests.get(image_url, stream=True), debug=self.debug)
             if r_img.status_code == 200 and r_img.headers.get("Content-Type", "").startswith("image/"):
                 tmp_fd, tmp_path = tempfile.mkstemp(suffix=".jpg")
                 with os.fdopen(tmp_fd, "wb") as f:
