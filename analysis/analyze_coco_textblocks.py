@@ -5,6 +5,7 @@ import argparse
 from collections import defaultdict
 
 INTEREST_CLASSES = ["author", "title", "subtitle"]
+TEXT_ORIENTATIONS = ["text-upright", "text-upside-down", "text-rotated-left", "text-rotated-right"]
 
 def find_coco_annotations(base_path):
     """
@@ -34,26 +35,38 @@ def find_coco_annotations(base_path):
 
 def analyze_coco_file(coco_path):
     """
-    Analyzes a COCO annotation file and collects statistics.
+    Analyzes a COCO annotation file and collects statistics by text orientation.
     
     Args:
         coco_path (str): Path to the COCO annotation file
     
     Returns:
-        dict: Statistics for each class
+        dict: Statistics for each class and orientation
     """
     print(f"Analyzing: {coco_path}")
     
     if not os.path.exists(coco_path):
         print(f"Warning: File {coco_path} does not exist!")
-        return {cls: defaultdict(list) for cls in INTEREST_CLASSES}
+        # Return empty stats structure
+        empty_stats = {}
+        for cls in INTEREST_CLASSES:
+            empty_stats[cls] = {}
+            for orientation in TEXT_ORIENTATIONS + ["unknown"]:
+                empty_stats[cls][orientation] = defaultdict(list)
+        return empty_stats
     
     try:
         with open(coco_path, "r") as f:
             data = json.load(f)
     except (json.JSONDecodeError, IOError) as e:
         print(f"Error loading {coco_path}: {e}")
-        return {cls: defaultdict(list) for cls in INTEREST_CLASSES}
+        # Return empty stats structure
+        empty_stats = {}
+        for cls in INTEREST_CLASSES:
+            empty_stats[cls] = {}
+            for orientation in TEXT_ORIENTATIONS + ["unknown"]:
+                empty_stats[cls][orientation] = defaultdict(list)
+        return empty_stats
     
     # Mapping category_id -> name
     cat_id_to_name = {cat["id"]: cat["name"] for cat in data["categories"]}
@@ -63,13 +76,39 @@ def analyze_coco_file(coco_path):
     # Mapping image_id -> (width, height)
     img_id_to_shape = {img["id"]: (img["width"], img["height"]) for img in data["images"]}
     
-    # Collect values per class
-    stats = {cls: defaultdict(list) for cls in INTEREST_CLASSES}
+    # Mapping image_id -> tags (for text orientation)
+    img_id_to_tags = {}
+    
+    for img in data["images"]:
+        # Check both direct tags and extra.user_tags
+        tags = img.get("tags", [])
+        extra_tags = img.get("extra", {}).get("user_tags", [])
+        all_tags_combined = tags + extra_tags
+        
+        orientation = "unknown"
+        for tag in all_tags_combined:
+            if tag in TEXT_ORIENTATIONS:
+                orientation = tag
+                break
+        img_id_to_tags[img["id"]] = orientation
+    
+    
+    # Collect values per class and orientation
+    stats = {}
+    for cls in INTEREST_CLASSES:
+        stats[cls] = {}
+        for orientation in TEXT_ORIENTATIONS + ["unknown"]:
+            stats[cls][orientation] = defaultdict(list)
+    
     for ann in data["annotations"]:
         cat = cat_id_to_name.get(ann["category_id"])
         if cat not in INTEREST_CLASSES:
             continue
-        img_w, img_h = img_id_to_shape[ann["image_id"]]
+        
+        img_id = ann["image_id"]
+        img_w, img_h = img_id_to_shape[img_id]
+        orientation = img_id_to_tags.get(img_id, "unknown")
+        
         x, y, w, h = ann["bbox"]
         # relative values
         rel_x = x / img_w
@@ -77,30 +116,50 @@ def analyze_coco_file(coco_path):
         rel_w = w / img_w
         rel_h = h / img_h
         rel_y_center = (y + h/2) / img_h
-        stats[cat]["rel_x"].append(rel_x)
-        stats[cat]["rel_y"].append(rel_y)
-        stats[cat]["rel_w"].append(rel_w)
-        stats[cat]["rel_h"].append(rel_h)
-        stats[cat]["rel_y_center"].append(rel_y_center)
+        
+        stats[cat][orientation]["rel_x"].append(rel_x)
+        stats[cat][orientation]["rel_y"].append(rel_y)
+        stats[cat][orientation]["rel_w"].append(rel_w)
+        stats[cat][orientation]["rel_h"].append(rel_h)
+        stats[cat][orientation]["rel_y_center"].append(rel_y_center)
     return stats
 
 def print_stats(stats, split_name):
     print(f"\n=== Analysis for {split_name} ===")
     for cls in INTEREST_CLASSES:
         print(f"\n--- Class: {cls} ---")
-        for key in ["rel_x", "rel_y", "rel_w", "rel_h", "rel_y_center"]:
-            arr = np.array(stats[cls][key])
-            if len(arr) == 0:
-                print(f"{key}: no data")
+        
+        # Show statistics for each orientation
+        for orientation in TEXT_ORIENTATIONS + ["unknown"]:
+            # Check if there's any data for this orientation
+            has_data = False
+            for key in ["rel_x", "rel_y", "rel_w", "rel_h", "rel_y_center"]:
+                if len(stats[cls][orientation][key]) > 0:
+                    has_data = True
+                    break
+            
+            if not has_data:
                 continue
-            print(f"{key}: Mean={arr.mean():.3f}, Median={np.median(arr):.3f}, Min={arr.min():.3f}, Max={arr.max():.3f}, Std={arr.std():.3f}, N={len(arr)}")
+                
+            print(f"\n  Orientation: {orientation}")
+            for key in ["rel_x", "rel_y", "rel_w", "rel_h", "rel_y_center"]:
+                arr = np.array(stats[cls][orientation][key])
+                if len(arr) == 0:
+                    continue
+                print(f"    {key}: Mean={arr.mean():.3f}, Median={np.median(arr):.3f}, Min={arr.min():.3f}, Max={arr.max():.3f}, Std={arr.std():.3f}, N={len(arr)}")
 
 def merge_stats(stats_list):
-    merged = {cls: defaultdict(list) for cls in INTEREST_CLASSES}
+    merged = {}
+    for cls in INTEREST_CLASSES:
+        merged[cls] = {}
+        for orientation in TEXT_ORIENTATIONS + ["unknown"]:
+            merged[cls][orientation] = defaultdict(list)
+    
     for stats in stats_list:
         for cls in INTEREST_CLASSES:
-            for key, values in stats[cls].items():
-                merged[cls][key].extend(values)
+            for orientation in TEXT_ORIENTATIONS + ["unknown"]:
+                for key, values in stats[cls][orientation].items():
+                    merged[cls][orientation][key].extend(values)
     return merged
 
 if __name__ == "__main__":
