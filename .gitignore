@@ -5,6 +5,7 @@ __pycache__
 datasets/backups
 datasets/LibVision
 datasets/Book_spine_2
+datasets/Bookspine_text_blocks
 runs
 output
 
