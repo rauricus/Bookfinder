@@ -6,6 +6,8 @@ dependencies:
   - python # Yolo11 used to only support 3.9-3.11
   - pip
 
+  - python-dotenv
+
   - pytorch # ::pytorch=2.3 # 2.3 needed at one time to avoid a bug during instance segmentation training (see https://github.com/ultralytics/ultralytics/issues/17168)
   - torchvision
   - torchaudio
