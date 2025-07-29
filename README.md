@@ -30,9 +30,11 @@ The script first detects images of book spines in a photo (or a video stream). I
 * The meta data of books found like this is stored in a local DB. The book title list exported for SymSpell to use.
 
 ## What am I currently working on
-* Training a model to help me better recognize the text areas on a book spine. 
-  * The goal is to get a better detection of titles and subtitles, author names, publisher names and logos, and possibly additional book info.
-  * This can't be a 100% perfect match, but it should especially help on avoiding publisher names and book infos. We might even get a better handling on differentiating authors from book titles.
+* Determining where titles, subtitles and authors are located most of the time. The goal is to get a better detection of titles and subtitles, author names, publisher names and logos, and possibly additional book info.
+  * The original idea was to train a object detection model to help identify the text areas, but that doesn't work: object detection is not good in this: text is a different type of beast.
+  * The properly annotated Roboflow dataset (bookspine-text-blocks) can still be used to calculate, where titles and author names are typically located. This is what the script analysis/analyze_coco_textblocks.py does.
+* The plan is now to 1) keep identifying text blocks using the existing means (using EAST and OCR), but then 2) use the calculated, typical locations to help with classify text blocks as titles and authors, then 3) look up those.
+  * This can't be a 100% perfect match, but it should especially help on avoiding publisher names and book infos in lookups.
 
 ## What is not there yet
 -
