@@ -20,19 +20,19 @@ PROJECT = os.getenv("PROJECT")
 
 def api_request_with_retry(request_func, max_retries=5, delay=1, debug=False):
     """
-    Führt eine API-Anfrage mit Retry-Mechanismus aus.
+    Executes an API request with retry mechanism.
     
     Args:
-        request_func: Funktion, die die HTTP-Anfrage durchführt
-        max_retries: Maximale Anzahl der Wiederholungen
-        delay: Wartezeit zwischen den Versuchen (in Sekunden)
-        debug: Debug-Modus
+        request_func: Function that performs the HTTP request
+        max_retries: Maximum number of retries
+        delay: Wait time between attempts (in seconds)
+        debug: Debug mode
         
     Returns:
         requests.Response object
         
     Raises:
-        SystemExit: Wenn alle Retry-Versuche fehlschlagen
+        SystemExit: When all retry attempts fail
     """
     last_exception = None
     
@@ -43,7 +43,7 @@ def api_request_with_retry(request_func, max_retries=5, delay=1, debug=False):
             
             response = request_func()
             
-            # Prüfe auf HTTP-Fehler (4xx, 5xx)
+            # Check for HTTP errors (4xx, 5xx)
             if response.status_code >= 400:
                 if debug:
                     print(f"Debug: HTTP error {response.status_code}, attempt {attempt + 1}/{max_retries + 1}")
@@ -81,7 +81,7 @@ def api_request_with_retry(request_func, max_retries=5, delay=1, debug=False):
                 print("Stopping application due to persistent errors.")
                 sys.exit(1)
     
-    # Sollte nie erreicht werden, aber als Fallback
+    # Should never be reached, but as fallback
     print(f"Unexpected end of retry loop. Last error: {last_exception}")
     sys.exit(1)
 
@@ -172,8 +172,8 @@ def print_help():
 
 def get_images_without_text_tag(debug=False, limit=None):
     """
-    Holt alle Bilder aus dem Projekt, die KEINEN Tag mit Prefix 'text-' haben.
-    Unterstützt Paginierung und wendet das Limit erst nach dem Filtern an.
+    Fetches all images from the project that have NO tag with prefix 'text-'.
+    Supports pagination and applies the limit only after filtering.
     """
     url = f"https://api.roboflow.com/{WORKSPACE}/{PROJECT}/search"
     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
@@ -206,7 +206,7 @@ def get_images_without_text_tag(debug=False, limit=None):
                 images = response_json.get("results", [])
                 
                 if not images:
-                    # Keine weiteren Bilder vorhanden
+                    # No more images available
                     if debug:
                         print(f"Debug: No more images at offset {offset}")
                     break
@@ -219,14 +219,14 @@ def get_images_without_text_tag(debug=False, limit=None):
                     print(f"Debug: Page {offset//page_size + 1}: {len(images)} total, {len(filtered_page)} filtered")
                     print(f"Debug: Total filtered so far: {len(all_filtered_images)}")
                 
-                # Prüfe, ob das Limit bereits erreicht wurde
+                # Check if the limit has already been reached
                 if limit is not None and len(all_filtered_images) >= limit:
                     if debug:
                         print(f"Debug: Limit of {limit} filtered images reached")
                     all_filtered_images = all_filtered_images[:limit]
                     break
                 
-                # Wenn weniger Bilder zurückgegeben wurden als erwartet, sind wir am Ende
+                # If fewer images were returned than expected, we're at the end
                 if len(images) < page_size:
                     if debug:
                         print(f"Debug: Reached end of results (got {len(images)} < {page_size})")
