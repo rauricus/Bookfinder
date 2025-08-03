@@ -68,7 +68,7 @@ def test_dynamic_gap_with_image(image_path):
     
     # Test the dynamic threshold calculation
     dynamic_threshold = TextRegionSorter._calculate_dynamic_gap_threshold(boxes_with_centers)
-    print(f"\nDynamic gap threshold: {dynamic_threshold}px")
+    print(f"\nSMART GAP threshold: {dynamic_threshold}px")
     
     # Compare with fixed threshold (old behavior)
     fixed_threshold = 80
@@ -76,7 +76,7 @@ def test_dynamic_gap_with_image(image_path):
     print(f"Difference: {dynamic_threshold - fixed_threshold:+d}px")
     
     # Sort boxes and get structure info
-    print("\n--- Sorting with dynamic threshold ---")
+    print("\n--- Sorting with SMART GAP ANALYSIS ---")
     sorted_boxes, structure_info = TextRegionSorter.sort_boxes_by_position(boxes)
     
     print(f"Detected columns: {structure_info['total_columns']}")
@@ -95,23 +95,34 @@ def test_dynamic_gap_with_image(image_path):
         print(f"Error during OCR: {e}")
 
 def main():
-    """Main function to test dynamic gap functionality."""
+    """Main function to test smart gap functionality."""
     
-    # Test with the attached image first
+    # Test with actual book spine images from previous runs
+    test_images = [
+        "output/predict32/book/Books_00005_3.jpg",  # This should be the Jaron Lanier case
+        "output/predict32/book/Books_00005_0.jpg",
+        "output/predict32/book/Books_00005_1.jpg", 
+        "output/predict32/book/Books_00005_2.jpg"
+    ]
+    
+    print("Testing SMART GAP ANALYSIS with real book spine extracts...")
+    print("=" * 70)
+    
+    for image_path in test_images:
+        if os.path.exists(image_path):
+            print(f"\n{'='*50}")
+            test_dynamic_gap_with_image(image_path)
+        else:
+            print(f"Image not found: {image_path}")
+    
+    # Also test with the original bus image for comparison
+    print(f"\n{'='*50}")
+    print("Comparison with bus.jpg:")
     test_image_path = "example-files/bus.jpg"
     if os.path.exists(test_image_path):
         test_dynamic_gap_with_image(test_image_path)
     else:
-        print(f"Test image not found: {test_image_path}")
-        
-        # Try to find other test images
-        example_dirs = ["example-files", "example-files/books", "example-files/ocr_test"]
-        for dir_path in example_dirs:
-            if os.path.exists(dir_path):
-                print(f"\nAvailable files in {dir_path}:")
-                for file in os.listdir(dir_path):
-                    if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
-                        print(f"  {file}")
+        print(f"Bus image not found: {test_image_path}")
 
 if __name__ == "__main__":
     main()

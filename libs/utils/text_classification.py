@@ -76,21 +76,24 @@ class TextRegionSorter:
     @staticmethod
     def _calculate_dynamic_gap_threshold(boxes_with_centers):
         """
-        Calculate a dynamic gap threshold based on the heights of text boxes.
+        Calculate an intelligent gap threshold using multiple factors:
+        1. Text box heights (font size indicator)
+        2. Actual gap distribution (what gaps already exist)
+        3. Layout analysis (detect natural breaks between word-gaps and column-gaps)
         
-        The idea: Larger text (higher boxes) should have proportionally larger gaps
-        between columns. This makes the algorithm more robust across different font sizes.
+        This provides better separation between word-gaps and column-gaps,
+        solving issues like "Jaron Lanier" | "Title" separation.
         
         Args:
             boxes_with_centers: List of tuples (box, center_x, center_y)
             
         Returns:
-            int: Dynamic gap threshold in pixels
+            int: Smart gap threshold in pixels
         """
         if not boxes_with_centers:
             return 80  # Fallback to original value
         
-        # Extract box heights
+        # Factor 1: Text height analysis (as baseline, but more conservative)
         heights = []
         for (x1, y1, x2, y2), center_x, center_y in boxes_with_centers:
             height = y2 - y1
@@ -100,32 +103,66 @@ class TextRegionSorter:
         if not heights:
             return 80  # Fallback if no valid heights found
         
-        # Calculate statistical measures of box heights
         heights.sort()
         median_height = heights[len(heights) // 2]
+        height_based_threshold = median_height * 1.5  # Reduced from 2.0 to be more sensitive
         
-        # For additional robustness, we can also consider the average of middle 50% of heights
-        # This helps ignore extreme outliers (very small or very large boxes)
-        q1_idx = len(heights) // 4
-        q3_idx = 3 * len(heights) // 4
-        middle_heights = heights[q1_idx:q3_idx] if len(heights) >= 4 else heights
-        typical_height = sum(middle_heights) / len(middle_heights) if middle_heights else median_height
+        # Factor 2: Actual gap analysis - examine existing gaps between boxes
+        sorted_boxes = sorted(boxes_with_centers, key=lambda b: b[0][0])  # Sort by x1
+        actual_gaps = []
         
-        # Calculate dynamic threshold
-        # Rule of thumb: Gap should be at least 1.5-2.5 times the typical text height
-        # This ensures clear separation between distinct columns while avoiding false splits
-        base_multiplier = 2.0  # Base multiplier for typical text height
-        min_threshold = 40     # Absolute minimum gap size (for very small text)
-        max_threshold = 200    # Absolute maximum gap size (to prevent over-sensitivity)
+        for i in range(1, len(sorted_boxes)):
+            left_box = sorted_boxes[i-1][0]   # (x1, y1, x2, y2)
+            right_box = sorted_boxes[i][0]    # (x1, y1, x2, y2)
+            gap = right_box[0] - left_box[2]  # actual gap: right.x1 - left.x2
+            if gap > 0:  # Only positive gaps
+                actual_gaps.append(gap)
         
-        dynamic_threshold = typical_height * base_multiplier
+        if not actual_gaps:
+            # No gaps found, use height-based threshold with bounds
+            final_threshold = max(30, min(120, height_based_threshold))
+            logger.debug(f"Smart gap calculation: no gaps found, using height-based={final_threshold:.1f}")
+            return int(final_threshold)
         
-        # Apply bounds to keep threshold reasonable
-        final_threshold = max(min_threshold, min(max_threshold, dynamic_threshold))
+        # Factor 3: Find natural break in gap distribution
+        # This distinguishes between word-spacing (small gaps) and column-spacing (large gaps)
+        actual_gaps.sort()
+        gap_jump_threshold = None
         
-        logger.debug(f"Dynamic gap calculation: typical_height={typical_height:.1f}, "
-                    f"median_height={median_height:.1f}, dynamic_threshold={dynamic_threshold:.1f}, "
-                    f"final_threshold={final_threshold:.1f}")
+        if len(actual_gaps) >= 2:
+            gap_ratios = []
+            for i in range(1, len(actual_gaps)):
+                if actual_gaps[i-1] > 0:  # Avoid division by zero
+                    ratio = actual_gaps[i] / actual_gaps[i-1]
+                    gap_ratios.append((ratio, actual_gaps[i], actual_gaps[i-1]))
+            
+            # Find largest ratio jump (indicates transition from word-gaps to column-gaps)
+            if gap_ratios:
+                max_ratio, large_gap, small_gap = max(gap_ratios, key=lambda x: x[0])
+                if max_ratio > 2.0:  # Significant jump indicates column separation
+                    # Use a threshold slightly below the large gap
+                    gap_jump_threshold = large_gap * 0.8
+                    logger.debug(f"Gap jump detected: {small_gap:.1f} -> {large_gap:.1f} (ratio={max_ratio:.1f})")
+        
+        # Factor 4: Combine factors intelligently
+        candidates = [height_based_threshold]
+        if gap_jump_threshold is not None:
+            candidates.append(gap_jump_threshold)
+        
+        # Choose the most conservative (lowest) reasonable threshold
+        # This ensures we don't miss column separations due to being too aggressive
+        smart_threshold = min(candidates)
+        
+        # Apply reasonable bounds
+        final_threshold = max(25, min(150, smart_threshold))
+        
+        logger.debug(f"Smart gap calculation: "
+                    f"median_height={median_height:.1f}, "
+                    f"height_based={height_based_threshold:.1f}, "
+                    f"gap_jump={gap_jump_threshold}, "
+                    f"smart={smart_threshold:.1f}, "
+                    f"final={final_threshold:.1f}, "
+                    f"gaps={actual_gaps}")
         
         return int(final_threshold)
     

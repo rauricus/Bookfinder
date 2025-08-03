@@ -409,10 +409,10 @@ class TestTextRegionSorting(unittest.TestCase):
         
         threshold = TextRegionSorter._calculate_dynamic_gap_threshold(boxes_with_centers)
         
-        # For small text (height 20), threshold should be around 40-50 pixels
-        # (2.0 * 20 = 40, but with minimum bound)
-        self.assertGreaterEqual(threshold, 40, "Small text should have minimum threshold")
-        self.assertLessEqual(threshold, 60, "Small text threshold should be reasonable")
+        # For small text (height 20), threshold should be around 30 pixels
+        # (1.5 * 20 = 30, using smart gap analysis)
+        self.assertGreaterEqual(threshold, 25, "Small text should have reasonable threshold")
+        self.assertLessEqual(threshold, 40, "Small text threshold should not be excessive")
 
     def test_dynamic_gap_threshold_large_text(self):
         """Test dynamic gap threshold calculation with large text boxes."""
@@ -425,10 +425,10 @@ class TestTextRegionSorting(unittest.TestCase):
         
         threshold = TextRegionSorter._calculate_dynamic_gap_threshold(boxes_with_centers)
         
-        # For large text (height 80), threshold should be around 160 pixels
-        # (2.0 * 80 = 160)
-        self.assertGreaterEqual(threshold, 140, "Large text should have proportional threshold")
-        self.assertLessEqual(threshold, 180, "Large text threshold should be reasonable")
+        # For large text (height 80), threshold should be around 120 pixels
+        # (1.5 * 80 = 120, using smart gap analysis)
+        self.assertGreaterEqual(threshold, 100, "Large text should have proportional threshold")
+        self.assertLessEqual(threshold, 150, "Large text threshold should be capped")
 
     def test_dynamic_gap_threshold_mixed_text_sizes(self):
         """Test dynamic gap threshold with mixed text sizes (realistic scenario)."""
@@ -443,10 +443,10 @@ class TestTextRegionSorting(unittest.TestCase):
         
         threshold = TextRegionSorter._calculate_dynamic_gap_threshold(boxes_with_centers)
         
-        # Should calculate based on typical/median size, not extremes
-        # Median height should be around 30, so threshold around 60
-        self.assertGreaterEqual(threshold, 50, "Mixed text should use middle values")
-        self.assertLessEqual(threshold, 80, "Mixed text threshold should avoid extremes")
+        # Should calculate based on smart gap analysis
+        # With median height around 30, threshold should be around 45
+        self.assertGreaterEqual(threshold, 35, "Mixed text should use smart analysis")
+        self.assertLessEqual(threshold, 60, "Mixed text threshold should avoid extremes")
 
     def test_column_detection_with_dynamic_threshold_small_text(self):
         """Test that dynamic threshold works better for small text column separation."""
@@ -484,6 +484,78 @@ class TestTextRegionSorting(unittest.TestCase):
         # the 20px gaps should NOT create separate columns
         self.assertEqual(structure_info['total_columns'], 1, 
                         "Dynamic threshold should avoid false splits in large text")
+
+    def test_jaron_lanier_scenario(self):
+        """Test the specific 'Jaron Lanier' | 'Title' scenario where smart gap analysis should detect column separation."""
+        # Realistic scenario based on actual book spine:
+        # "Jaron Lanier" (left) should be separate from title words (right)
+        boxes = [
+            # Left column: Author "Jaron Lanier" - two words, small gaps between them
+            (355, 71, 506, 133),   # "Jaron" 
+            (513, 77, 676, 135),   # "Lanier"
+            
+            # Right column: Title words - multiple words with small gaps
+            (725, 74, 869, 136),   # "Wem"
+            (872, 78, 1051, 152),  # "gehört" 
+            (1058, 81, 1386, 150), # "die Zukunft?"
+        ]
+        
+        # Actual gaps in this layout:
+        # Jaron->Lanier: 513-506 = 7px (word gap)
+        # Lanier->Wem: 725-676 = 49px (COLUMN gap - should be detected!)
+        # Wem->gehört: 872-869 = 3px (word gap)
+        # gehört->die: 1058-1051 = 7px (word gap)
+        
+        sorted_boxes, structure_info = TextRegionSorter.sort_boxes_by_position(boxes)
+        
+        # The smart gap analysis should detect the 49px gap as significant
+        # compared to the 3-7px word gaps, creating 2 columns
+        self.assertEqual(structure_info['total_columns'], 2, 
+                        "Smart gap analysis should detect author/title separation in Jaron Lanier scenario")
+        
+        # Verify the column separation is around x=700 (between Lanier and Wem)
+        boundaries = structure_info.get('column_boundaries', [])
+        self.assertEqual(len(boundaries), 1, "Should have exactly one column boundary")
+        self.assertGreater(boundaries[0], 680, "Boundary should be after 'Lanier'")
+        self.assertLess(boundaries[0], 750, "Boundary should be before 'Wem'")
+
+    def test_smart_gap_analysis_word_spacing(self):
+        """Test that smart gap analysis doesn't split normal word spacing."""
+        # Scenario: Normal sentence with consistent word spacing - should stay as one column
+        boxes = [
+            (10, 10, 80, 30),    # Word 1
+            (90, 10, 150, 30),   # Word 2 - gap: 90-80 = 10px
+            (160, 10, 220, 30),  # Word 3 - gap: 160-150 = 10px  
+            (230, 10, 300, 30),  # Word 4 - gap: 230-220 = 10px
+        ]
+        
+        sorted_boxes, structure_info = TextRegionSorter.sort_boxes_by_position(boxes)
+        
+        # All gaps are similar (10px), no significant jump detected -> single column
+        self.assertEqual(structure_info['total_columns'], 1, 
+                        "Smart gap analysis should not split consistent word spacing")
+
+    def test_smart_gap_analysis_mixed_spacing(self):
+        """Test smart gap analysis with mixed word/column spacing."""
+        # Scenario: Two groups with different gap patterns
+        boxes = [
+            # Group 1: Tight word spacing
+            (10, 10, 50, 30),    # Word 1
+            (55, 10, 95, 30),    # Word 2 - gap: 55-50 = 5px
+            (100, 10, 140, 30),  # Word 3 - gap: 100-95 = 5px
+            
+            # Large gap to next group
+            
+            # Group 2: Looser word spacing  
+            (200, 10, 250, 30),  # Word 4 - gap: 200-140 = 60px (BIG JUMP!)
+            (260, 10, 310, 30),  # Word 5 - gap: 260-250 = 10px
+        ]
+        
+        sorted_boxes, structure_info = TextRegionSorter.sort_boxes_by_position(boxes)
+        
+        # Gap jump from 5px to 60px (ratio = 12) should be detected as column separation
+        self.assertEqual(structure_info['total_columns'], 2, 
+                        "Smart gap analysis should detect significant gap jumps")
 
 
 def run_all_tests():
