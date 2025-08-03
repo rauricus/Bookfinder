@@ -42,7 +42,10 @@ def ocr_onImage(image, east_model, debug=0, languages=None):
 
     # Visualize all bounding boxes found.
     if debug >= 1:
-        showBoundingBoxes(image.copy(), sorted_boxes)
+        if not showBoundingBoxes(image.copy(), sorted_boxes):
+            logger.warning("User aborted execution during bounding box visualization.")
+            return {}
+
 
     # -- Perform OCR on text areas found ---
     ocr_results = {}
@@ -217,31 +220,54 @@ def decode_bounding_boxes(scores, geometry, scoreThresh):
 def showBoundingBoxes(image, boxes):
     """
     Visualizes the bounding boxes on the input image.
+    
+    Returns:
+        bool: True if user wants to continue, False if user pressed ESC to abort
     """
 
-    # Check if vertices are empty
+    # Create a copy to avoid modifying the original image
+    display_image = image.copy()
+
+    # Prepare window title based on content
     if boxes is None or len(boxes) == 0:
         logger.debug("No bounding boxes to display.")
-        return
+        window_title = "Bounding boxes (No text regions detected)"
+    else:
+        window_title = f"Bounding boxes ({len(boxes)} text regions found)"
+        
+        # Show bounding boxes
+        for i, (startX, startY, endX, endY) in enumerate(boxes):
+            # Draw the lines
+            cv2.rectangle(display_image, (startX, startY), (endX, endY), color=(0, 255, 0), thickness=2)
+
+            # Add the index label
+            text_x, text_y = startX+10, startY+40
+            cv2.putText(display_image, f"{i}", (text_x, text_y),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1.2,
+                        color=(0, 255, 0), thickness=2)
+
+    # Add informational text overlay
+    info_text = "Press any key to continue, ESC to abort"
+    cv2.putText(display_image, info_text, (10, 30),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.7,
+                color=(255, 255, 255), thickness=2)
+    cv2.putText(display_image, info_text, (10, 30),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.7,
+                color=(0, 0, 0), thickness=1)
     
-    # Show bounding boxes
-    for i, (startX, startY, endX, endY) in enumerate(boxes):
-
-        # Draw the lines
-        cv2.rectangle(image, (startX, startY), (endX, endY), color=(0, 255, 0), thickness=2)
-
-        # Add the index label
-        text_x, text_y = startX+10, startY+40
-        cv2.putText(image, f"{i}", (text_x, text_y),
-                    fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1.2,
-                    color=(0, 255, 0), thickness=2)
-
     # Display the image with bounding boxes
-    cv2.imshow("Bounding boxes", image)
-    key = cv2.waitKey(0)
+    cv2.imshow(window_title, display_image)
+    
+    # Wait for key press
+    key = cv2.waitKey(0) & 0xFF
     cv2.destroyAllWindows()
+    
+    # Give some time for proper window cleanup
+    cv2.waitKey(1)
 
     if key == 27:  # ESC key
         logger.warning("ESC key pressed. Aborting execution.")
-        return
+        return False
+    
+    return True
 
