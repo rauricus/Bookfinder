@@ -129,8 +129,11 @@ def detect_text_regions(image, east_model, min_confidence=0.5, nms_threshold=0.8
     if isinstance(indices, tuple):  # Check if indices is a tuple (empty result)
         indices = np.array([])  # Convert it into an empty NumPy array
 
-    # apply morphological operations to merge nearby bounding boxes
-    kernel = np.ones((10, 10), np.uint8)
+    # Apply morphological operations to merge nearby bounding boxes
+    
+    # Reduced kernel size from 10x10 to 5x5 to merge nearby boxes more conservatively.
+    # This helps in better column separation and avoids merging distinct text regions.
+    kernel = np.ones((5, 5), np.uint8)  # Smaller kernel = less aggressive merging
     mask = np.zeros((H, W), dtype=np.uint8)
 
     # Draw detected boxes onto a mask
