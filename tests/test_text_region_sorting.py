@@ -398,6 +398,93 @@ class TestTextRegionSorting(unittest.TestCase):
         self.assertEqual(actual_positions, expected_positions,
                         "Should not create false columns based on large center distances")
 
+    def test_dynamic_gap_threshold_small_text(self):
+        """Test dynamic gap threshold calculation with small text boxes."""
+        # Small text boxes (height ~20px)
+        boxes_with_centers = [
+            ((10, 10, 50, 30), 30, 20),    # height = 20
+            ((60, 10, 100, 30), 80, 20),   # height = 20
+            ((110, 10, 150, 30), 130, 20), # height = 20
+        ]
+        
+        threshold = TextRegionSorter._calculate_dynamic_gap_threshold(boxes_with_centers)
+        
+        # For small text (height 20), threshold should be around 40-50 pixels
+        # (2.0 * 20 = 40, but with minimum bound)
+        self.assertGreaterEqual(threshold, 40, "Small text should have minimum threshold")
+        self.assertLessEqual(threshold, 60, "Small text threshold should be reasonable")
+
+    def test_dynamic_gap_threshold_large_text(self):
+        """Test dynamic gap threshold calculation with large text boxes."""
+        # Large text boxes (height ~80px)
+        boxes_with_centers = [
+            ((10, 10, 100, 90), 55, 50),    # height = 80
+            ((120, 10, 200, 90), 160, 50),  # height = 80
+            ((220, 10, 300, 90), 260, 50),  # height = 80
+        ]
+        
+        threshold = TextRegionSorter._calculate_dynamic_gap_threshold(boxes_with_centers)
+        
+        # For large text (height 80), threshold should be around 160 pixels
+        # (2.0 * 80 = 160)
+        self.assertGreaterEqual(threshold, 140, "Large text should have proportional threshold")
+        self.assertLessEqual(threshold, 180, "Large text threshold should be reasonable")
+
+    def test_dynamic_gap_threshold_mixed_text_sizes(self):
+        """Test dynamic gap threshold with mixed text sizes (realistic scenario)."""
+        # Mixed text sizes - some small titles, some large author names
+        boxes_with_centers = [
+            ((10, 10, 80, 25), 45, 17.5),    # Small text: height = 15
+            ((90, 10, 180, 40), 135, 25),     # Medium text: height = 30
+            ((200, 10, 350, 60), 275, 35),    # Large text: height = 50
+            ((370, 10, 450, 30), 410, 20),    # Small text: height = 20
+            ((460, 10, 600, 55), 530, 32.5),  # Medium text: height = 45
+        ]
+        
+        threshold = TextRegionSorter._calculate_dynamic_gap_threshold(boxes_with_centers)
+        
+        # Should calculate based on typical/median size, not extremes
+        # Median height should be around 30, so threshold around 60
+        self.assertGreaterEqual(threshold, 50, "Mixed text should use middle values")
+        self.assertLessEqual(threshold, 80, "Mixed text threshold should avoid extremes")
+
+    def test_column_detection_with_dynamic_threshold_small_text(self):
+        """Test that dynamic threshold works better for small text column separation."""
+        # Scenario: Small text with author/title separation that would be missed with fixed 80px threshold
+        boxes = [
+            # Author column (small text, ~15px gaps need smaller threshold)
+            (10, 10, 80, 25),    # Author line 1  
+            (10, 30, 75, 45),    # Author line 2
+            
+            # Title column (separated by ~50px - should be detected as separate with dynamic threshold)
+            (130, 10, 250, 25),  # Title line 1
+            (130, 30, 240, 45),  # Title line 2
+        ]
+        
+        sorted_boxes, structure_info = TextRegionSorter.sort_boxes_by_position(boxes)
+        
+        # With dynamic threshold (small text), this should detect 2 columns
+        # Gap is 130-80=50px, text height ~15px, so dynamic threshold ~30-40px
+        self.assertEqual(structure_info['total_columns'], 2, 
+                        "Dynamic threshold should detect author/title separation in small text")
+
+    def test_column_detection_with_dynamic_threshold_large_text(self):
+        """Test that dynamic threshold avoids false splits with large text."""
+        # Scenario: Large text where words are spaced but should stay in same column
+        boxes = [
+            # Single book spine with large text and natural word spacing
+            (10, 10, 120, 60),   # Word 1 - large text (height 50px)
+            (140, 10, 200, 60),  # Word 2 - separated by 20px (140-120=20)
+            (220, 10, 320, 60),  # Word 3 - separated by 20px (220-200=20)
+        ]
+        
+        sorted_boxes, structure_info = TextRegionSorter.sort_boxes_by_position(boxes)
+        
+        # With dynamic threshold (large text ~50px height -> threshold ~100px),
+        # the 20px gaps should NOT create separate columns
+        self.assertEqual(structure_info['total_columns'], 1, 
+                        "Dynamic threshold should avoid false splits in large text")
+
 
 def run_all_tests():
     """Run all text region sorting tests."""
