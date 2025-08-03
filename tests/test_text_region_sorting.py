@@ -26,7 +26,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (10, 40, 120, 60)     # Middle box
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Should be sorted by Y position: top, middle, bottom
         expected_y_order = [10, 40, 80]  # y1 coordinates
@@ -43,7 +43,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (70, 10, 120, 30)     # Middle box
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Should be sorted by X position: left, middle, right
         expected_x_order = [10, 70, 100]  # x1 coordinates
@@ -60,7 +60,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (10, 40, 120, 60)     # Middle box (should be middle)
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Should be sorted by Y position: top, middle, bottom
         expected_y_order = [10, 40, 80]  # y1 coordinates
@@ -77,7 +77,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (50, 40, 110, 60),     # Bottom box (separate row)
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Should maintain the top row order: left, right, then bottom
         expected_positions = [(10, 10), (85, 10), (50, 40)]  # (x1, y1) coordinates
@@ -94,7 +94,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (10, 50, 100, 70)     # Left column, below first box
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Expected: Left column (top, then bottom), then Right column
         expected_positions = [(10, 10), (10, 50), (200, 10)]  # (x1, y1) coordinates
@@ -113,7 +113,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (200, 70, 280, 90)     # Bottom right (far - gap=130px)
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Expected order: top row (left, right), middle, bottom row (left, right)
         expected_positions = [(10, 10), (85, 10), (50, 40), (10, 70), (200, 70)]
@@ -131,7 +131,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (50, 50, 100, 70)     # Left column, below
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Expected: Left column (Left, Middle, Below), then Right column
         expected_positions = [(10, 10), (60, 10), (50, 50), (300, 10)]
@@ -144,7 +144,7 @@ class TestTextRegionSorting(unittest.TestCase):
         """Test handling of empty input."""
         boxes = []
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         self.assertEqual(sorted_boxes, [],
                         "Empty input should return empty result")
@@ -153,7 +153,7 @@ class TestTextRegionSorting(unittest.TestCase):
         """Test handling of single bounding box."""
         boxes = [(10, 10, 100, 30)]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         expected_boxes = [(10, 10, 100, 30)]
         
         self.assertEqual(sorted_boxes, expected_boxes,
@@ -166,7 +166,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (40, 10, 90, 30)      # Right box (overlaps with left box)
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Should still sort by center position (left box has lower center_x)
         expected_positions = [(10, 10), (40, 10)]  # (x1, y1) coordinates
@@ -184,7 +184,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (340, 20, 380, 40)    # Right column: "43388" (left edge = 340, gap = 340-250 = 90px > 80px)
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Expected: Left column, Center column (top-to-bottom), Right column
         expected_positions = [(10, 20), (170, 10), (170, 35), (340, 20)]
@@ -203,7 +203,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (180, 60, 210, 80)    # Right column: "666" (bottom)
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Expected: Left column (author), then Right column (title+number)
         expected_positions = [(10, 10), (10, 35), (180, 10), (180, 35), (180, 60)]
@@ -218,7 +218,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (50, 20, 120, 40),    # Single title in center
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         expected_boxes = [(50, 20, 120, 40)]
         self.assertEqual(sorted_boxes, expected_boxes,
@@ -233,7 +233,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (10, 70, 80, 85),     # Line 4
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Should maintain top-to-bottom order within single column
         expected_y_order = [10, 30, 50, 70]
@@ -250,7 +250,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (250, 20, 290, 40)    # Right (gap=80px - exactly at threshold)
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # With gap exactly at 80px, should create separate columns
         expected_positions = [(10, 20), (130, 20), (250, 20)]
@@ -269,7 +269,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (170, 80, 230, 100)   # Right column: line 4
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Expected: Left column (1 item), then Right column (4 items top-to-bottom)
         expected_positions = [(10, 10), (170, 5), (170, 30), (170, 55), (170, 80)]
@@ -286,7 +286,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (100, 20, 140, 40),   # Word 3 (gap=5px - should stay in same column)
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # All should be in one column, sorted left-to-right within same row
         expected_positions = [(10, 20), (55, 20), (100, 20)]
@@ -312,7 +312,7 @@ class TestTextRegionSorting(unittest.TestCase):
             (230, 50, 280, 70),   # "Völker" - center_x=255
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Expected behavior:
         # - "Albert" and "Hourani" have actual gap = 70-60 = 10px < 80px → same column
@@ -347,7 +347,7 @@ class TestTextRegionSorting(unittest.TestCase):
                                   # Center distance = 80 - 30 = 50px (would be misleading)
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Should be treated as single column since actual gap is only 10px
         expected_positions = [(10, 10), (60, 10)]
@@ -366,7 +366,7 @@ class TestTextRegionSorting(unittest.TestCase):
                                   # Actual gap = 150 - 50 = 100px > 80px → separate columns
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Should be treated as two columns: left column first, then right column
         expected_positions = [(10, 10), (150, 10)]
@@ -389,7 +389,7 @@ class TestTextRegionSorting(unittest.TestCase):
                                   # Actual gap = 120 - 50 = 70px < 80px (correct: same column)
         ]
         
-        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        sorted_boxes,_ = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Should be treated as single column since actual gap is 70px < 80px
         expected_positions = [(10, 10), (120, 10)]
