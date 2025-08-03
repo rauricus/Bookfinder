@@ -144,6 +144,7 @@ class BookFinder:
 
                                 logger.info(f"{variant_path} ->")
 
+                                # Get OCR results
                                 detected_texts = ocr_onImage(variant_img, east_model, self.debug)
 
                                 valid_text_regions = {}
@@ -168,7 +169,7 @@ class BookFinder:
 
 
                                 corrected_text = ' '.join(valid_text_regions.values()).strip()
-                                logger.debug(f"    corrected title: {corrected_text}")
+                                logger.debug(f"    corrected title (sorted): {corrected_text}")
 
                                 matched_title = match_to_titles(corrected_text)
                                 logger.debug(f"    matched title: {matched_title}")

@@ -5,7 +5,7 @@ import numpy as np
 
 from libs.logging import get_logger
 from libs.utils.image_utils import cropImage, preprocess_for_ocr
-from libs.utils.text_utils import clean_ocr_text
+from libs.utils.text_classification import TextRegionSorter
 
 import pytesseract
 
@@ -29,22 +29,25 @@ def ocr_onImage(image, east_model, debug=0, languages=None):
         languages (str, optional): Language string for Tesseract. If None, uses config.OCR_LANGUAGES.
 
     Returns:
-        dict: OCR results for each detected text region.
+        dict: OCR results for each detected text region, sorted by position (top-to-bottom, left-to-right)
     """
 
     # --- Detect text regions ---
 
     # Detect text regions using EAST
     boxes = detect_text_regions(image, east_model)
+    
+    # Sort boxes by position
+    sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
 
     # Visualize all bounding boxes found.
     if debug >= 1:
-        showBoundingBoxes(image.copy(), boxes)
+        showBoundingBoxes(image.copy(), sorted_boxes)
 
     # -- Perform OCR on text areas found ---
     ocr_results = {}
 
-    for i, box in enumerate(boxes):
+    for i, box in enumerate(sorted_boxes):
 
         # Get cropped image
         cropped_image = cropImage(image, box)
@@ -143,49 +146,7 @@ def detect_text_regions(image, east_model, min_confidence=0.5, nms_threshold=0.8
         x, y, w, h = cv2.boundingRect(contour)
         boxes.append((x, y, x + w, y + h))
 
-    # Sort bounding boxes top-to-bottom, then left-to-right
-    boxes = sort_bounding_boxes(boxes, y_tolerance=10)
-
     return boxes
-
-def sort_bounding_boxes(boxes, y_tolerance=10):
-    """
-    Sorts bounding boxes first left-to-right while considering slight misalignments in the Y-axis.
-    Args:
-        boxes (list of tuples): List of bounding boxes (x1, y1, x2, y2).
-        y_tolerance (int): Maximum pixel difference in Y to consider boxes on the same line.
-    Returns:
-        List of sorted bounding boxes.
-    """
-    if not boxes:
-        return []
-
-    # Sort by Y-coordinate first, then X
-    boxes = sorted(boxes, key=lambda b: (b[1], b[0]))
-
-    # Group bounding boxes by rows
-    rows = []
-    current_row = [boxes[0]]
-
-    for i in range(1, len(boxes)):
-        _, y1, _, y2 = boxes[i]
-        _, prev_y1, _, prev_y2 = boxes[i - 1]
-
-        # If the Y difference is within the threshold, consider it the same row
-        if abs(y1 - prev_y1) < y_tolerance or abs(y2 - prev_y2) < y_tolerance:
-            current_row.append(boxes[i])
-        else:
-            rows.append(sorted(current_row, key=lambda b: b[0]))  # Sort row by X
-            current_row = [boxes[i]]
-
-    # Append the last row
-    if current_row:
-        rows.append(sorted(current_row, key=lambda b: b[0]))
-
-    # Flatten the sorted rows
-    sorted_boxes = [box for row in rows for box in row]
-
-    return sorted_boxes
 
 
 def decode_bounding_boxes(scores, geometry, scoreThresh):
