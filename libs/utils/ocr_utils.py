@@ -55,7 +55,7 @@ def ocr_onImage(image, east_model, debug=0, languages=None):
         # Apply pre-processing to enable better OCR results
         processed_image = preprocess_for_ocr(cropped_image)
 
-        if (debug >= 1):
+        if (debug >= 2):
             cv2.imshow(f"Processed image {i}", processed_image)
 
             key = cv2.waitKey(0)
@@ -76,7 +76,7 @@ def ocr_onImage(image, east_model, debug=0, languages=None):
 
         ocr_results[i] = ocr_text.strip()
 
-    if (debug >= 1):
+    if (debug >= 2):
         cv2.destroyAllWindows()  # Ensure all windows are closed at the end
 
     return ocr_results
