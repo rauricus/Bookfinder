@@ -64,12 +64,12 @@ class TextRegionSorter:
     @staticmethod
     def _find_natural_columns(boxes_with_centers):
         """
-        Find natural column boundaries based on X-coordinate clustering.
+        Find natural column boundaries based on actual gaps between boxes.
         
         Algorithm:
-        1. Extract and sort all X-coordinates of box centers
-        2. Find significant gaps between consecutive X-coordinates
-        3. Use gap centers as column boundaries
+        1. Sort boxes by left edge (x1) to properly analyze gaps between boxes
+        2. Calculate actual gaps: right_box.x1 - left_box.x2
+        3. Find significant gaps (>min_gap_size) as column boundaries
         4. Group boxes into columns based on these boundaries
         
         Args:
@@ -81,19 +81,31 @@ class TextRegionSorter:
         if not boxes_with_centers:
             return []
         
-        # Extract X-coordinates and sort them
-        x_coords = [center_x for _, center_x, _ in boxes_with_centers]
-        x_coords = sorted(set(x_coords))  # Remove duplicates and sort
+        # Sort boxes by left edge (x1) to properly analyze gaps between boxes
+        sorted_boxes = sorted(boxes_with_centers, key=lambda b: b[0][0])  # Sort by x1
         
-        # Find gaps in X-coordinates to determine column boundaries
+        # Find actual gaps between consecutive boxes
         gaps = []
-        min_gap_size = 80  # Minimum gap size to consider a column boundary (pixels)
+        min_gap_size = 80  # Minimum actual gap size to consider a column boundary (pixels)
         
-        for i in range(1, len(x_coords)):
-            gap_size = x_coords[i] - x_coords[i-1]
-            if gap_size > min_gap_size:
-                gap_center = (x_coords[i] + x_coords[i-1]) / 2
+        for i in range(1, len(sorted_boxes)):
+            left_box = sorted_boxes[i-1][0]   # (x1, y1, x2, y2)
+            right_box = sorted_boxes[i][0]    # (x1, y1, x2, y2)
+            
+            # Calculate actual gap: right_box.x1 - left_box.x2
+            actual_gap = right_box[0] - left_box[2]
+            
+            if actual_gap > min_gap_size:
+                # Use the middle of the gap as boundary
+                gap_center = left_box[2] + actual_gap / 2
                 gaps.append(gap_center)
+        
+        # Remove duplicate gap positions (within small tolerance)
+        unique_gaps = []
+        gap_tolerance = 5  # pixels
+        for gap in sorted(gaps):
+            if not unique_gaps or abs(gap - unique_gaps[-1]) > gap_tolerance:
+                unique_gaps.append(gap)
         
         # Group boxes into columns based on gap boundaries
         # Algorithm: For each box, count how many gaps are to its left to determine column index
@@ -102,7 +114,7 @@ class TextRegionSorter:
         for box, center_x, center_y in boxes_with_centers:
             # Determine which column this box belongs to
             column_index = 0
-            for gap in gaps:
+            for gap in unique_gaps:
                 if center_x > gap:
                     column_index += 1
                 else:

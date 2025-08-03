@@ -178,16 +178,16 @@ class TestTextRegionSorting(unittest.TestCase):
     def test_three_column_layout(self):
         """Test three-column layout like 'GOLDMANN | ALLEN CARR | 43388'."""
         boxes = [
-            (10, 20, 80, 40),     # Left column: "GOLDMANN" 
-            (120, 10, 200, 30),   # Center column: "ALLEN CARR" (top)
-            (120, 35, 180, 55),   # Center column: "Endlich Nichtraucher!" (bottom)
-            (250, 20, 290, 40)    # Right column: "43388"
+            (10, 20, 80, 40),     # Left column: "GOLDMANN" (right edge = 80)
+            (170, 10, 250, 30),   # Center column: "ALLEN CARR" (left edge = 170, gap = 170-80 = 90px > 80px)
+            (170, 35, 230, 55),   # Center column: "Endlich Nichtraucher!" (bottom)
+            (340, 20, 380, 40)    # Right column: "43388" (left edge = 340, gap = 340-250 = 90px > 80px)
         ]
         
         sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Expected: Left column, Center column (top-to-bottom), Right column
-        expected_positions = [(10, 20), (120, 10), (120, 35), (250, 20)]
+        expected_positions = [(10, 20), (170, 10), (170, 35), (340, 20)]
         actual_positions = [(box[0], box[1]) for box in sorted_boxes]
         
         self.assertEqual(actual_positions, expected_positions,
@@ -196,17 +196,17 @@ class TestTextRegionSorting(unittest.TestCase):
     def test_author_title_layout(self):
         """Test typical author-title layout like 'Christoffer Carlsson | UNTER DEM STURM'."""
         boxes = [
-            (10, 10, 90, 30),     # Left column: "Christoffer" (top)
+            (10, 10, 90, 30),     # Left column: "Christoffer" (top, right edge = 90)
             (10, 35, 70, 55),     # Left column: "Carlsson" (bottom)
-            (150, 10, 220, 30),   # Right column: "UNTER DEM" (top)
-            (150, 35, 200, 55),   # Right column: "STURM" (bottom)
-            (150, 60, 180, 80)    # Right column: "666" (bottom)
+            (180, 10, 250, 30),   # Right column: "UNTER DEM" (top, left edge = 180, gap = 180-90 = 90px > 80px)
+            (180, 35, 230, 55),   # Right column: "STURM" (bottom)
+            (180, 60, 210, 80)    # Right column: "666" (bottom)
         ]
         
         sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Expected: Left column (author), then Right column (title+number)
-        expected_positions = [(10, 10), (10, 35), (150, 10), (150, 35), (150, 60)]
+        expected_positions = [(10, 10), (10, 35), (180, 10), (180, 35), (180, 60)]
         actual_positions = [(box[0], box[1]) for box in sorted_boxes]
         
         self.assertEqual(actual_positions, expected_positions,
@@ -262,17 +262,17 @@ class TestTextRegionSorting(unittest.TestCase):
     def test_uneven_column_heights(self):
         """Test columns with different heights (common in book spines)."""
         boxes = [
-            (10, 10, 80, 30),     # Left column: single line
-            (150, 5, 220, 25),    # Right column: line 1
-            (150, 30, 200, 50),   # Right column: line 2  
-            (150, 55, 180, 75),   # Right column: line 3
-            (150, 80, 210, 100)   # Right column: line 4
+            (10, 10, 80, 30),     # Left column: single line (right edge = 80)
+            (170, 5, 240, 25),    # Right column: line 1 (left edge = 170, gap = 170-80 = 90px > 80px)
+            (170, 30, 220, 50),   # Right column: line 2  
+            (170, 55, 200, 75),   # Right column: line 3
+            (170, 80, 230, 100)   # Right column: line 4
         ]
         
         sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
         
         # Expected: Left column (1 item), then Right column (4 items top-to-bottom)
-        expected_positions = [(10, 10), (150, 5), (150, 30), (150, 55), (150, 80)]
+        expected_positions = [(10, 10), (170, 5), (170, 30), (170, 55), (170, 80)]
         actual_positions = [(box[0], box[1]) for box in sorted_boxes]
         
         self.assertEqual(actual_positions, expected_positions,
@@ -294,6 +294,109 @@ class TestTextRegionSorting(unittest.TestCase):
         
         self.assertEqual(actual_positions, expected_positions,
                         "Small gaps should not create separate columns")
+
+    def test_albert_hourani_scenario(self):
+        """
+        Test the specific "Albert Hourani" scenario where words in the same line
+        should NOT be split into separate columns despite having space between them.
+        
+        This tests the actual gap calculation (x1_right - x2_left) vs center distance.
+        """
+        boxes = [
+            (10, 10, 60, 30),     # "Albert" - center_x=35
+            (70, 10, 140, 30),    # "Hourani" - center_x=105
+            (10, 50, 40, 70),     # "Die" - center_x=25  
+            (50, 50, 120, 70),    # "Geschichte" - center_x=85
+            (130, 50, 150, 70),   # "der" - center_x=140
+            (160, 50, 220, 70),   # "arabischen" - center_x=190
+            (230, 50, 280, 70),   # "Völker" - center_x=255
+        ]
+        
+        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        
+        # Expected behavior:
+        # - "Albert" and "Hourani" have actual gap = 70-60 = 10px < 80px → same column
+        # - All boxes should be in one column, sorted top-to-bottom, left-to-right within rows
+        # - Row 1: "Albert", "Hourani" (sorted by x-position)
+        # - Row 2: "Die", "Geschichte", "der", "arabischen", "Völker" (sorted by x-position)
+        
+        expected_positions = [
+            (10, 10),   # Albert
+            (70, 10),   # Hourani  
+            (10, 50),   # Die
+            (50, 50),   # Geschichte
+            (130, 50),  # der
+            (160, 50),  # arabischen
+            (230, 50),  # Völker
+        ]
+        
+        actual_positions = [(box[0], box[1]) for box in sorted_boxes]
+        
+        self.assertEqual(actual_positions, expected_positions,
+                        "Albert Hourani scenario: Words in same line should not be split into separate columns")
+
+    def test_actual_gap_vs_center_distance(self):
+        """
+        Test that actual gap calculation (x1_right - x2_left) works correctly
+        vs the incorrect center distance calculation.
+        """
+        boxes = [
+            (10, 10, 50, 30),     # Left box: actual right edge at x=50
+            (60, 10, 100, 30),    # Right box: actual left edge at x=60
+                                  # Actual gap = 60 - 50 = 10px < 80px → same column
+                                  # Center distance = 80 - 30 = 50px (would be misleading)
+        ]
+        
+        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        
+        # Should be treated as single column since actual gap is only 10px
+        expected_positions = [(10, 10), (60, 10)]
+        actual_positions = [(box[0], box[1]) for box in sorted_boxes]
+        
+        self.assertEqual(actual_positions, expected_positions,
+                        "Small actual gaps should not create separate columns")
+
+    def test_large_actual_gap_creates_columns(self):
+        """
+        Test that boxes with large actual gaps are correctly separated into columns.
+        """
+        boxes = [
+            (10, 10, 50, 30),     # Left box: right edge at x=50
+            (150, 10, 200, 30),   # Right box: left edge at x=150
+                                  # Actual gap = 150 - 50 = 100px > 80px → separate columns
+        ]
+        
+        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        
+        # Should be treated as two columns: left column first, then right column
+        expected_positions = [(10, 10), (150, 10)]
+        actual_positions = [(box[0], box[1]) for box in sorted_boxes]
+        
+        self.assertEqual(actual_positions, expected_positions,
+                        "Large actual gaps should create separate columns")
+
+    def test_false_column_detection_prevention(self):
+        """
+        Test that we don't create false columns based on center distance.
+        
+        This test uses the exact scenario that would fail with center-based gap calculation
+        but should work correctly with actual gap calculation.
+        """
+        boxes = [
+            (10, 10, 50, 30),     # Box 1: center_x = 30, right edge = 50
+            (120, 10, 200, 30),   # Box 2: center_x = 160, left edge = 120
+                                  # Center distance = 160 - 30 = 130px (would create false columns)
+                                  # Actual gap = 120 - 50 = 70px < 80px (correct: same column)
+        ]
+        
+        sorted_boxes = TextRegionSorter.sort_boxes_by_position(boxes)
+        
+        # Should be treated as single column since actual gap is 70px < 80px
+        expected_positions = [(10, 10), (120, 10)]
+        actual_positions = [(box[0], box[1]) for box in sorted_boxes]
+        
+        self.assertEqual(actual_positions, expected_positions,
+                        "Should not create false columns based on large center distances")
 
 
 def run_all_tests():
