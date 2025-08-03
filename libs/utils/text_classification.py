@@ -153,8 +153,13 @@ class TextRegionSorter:
         # This ensures we don't miss column separations due to being too aggressive
         smart_threshold = min(candidates)
         
-        # Apply reasonable bounds
-        final_threshold = max(25, min(150, smart_threshold))
+        # Apply reasonable bounds - use lower minimum for gap_jump_threshold cases
+        if gap_jump_threshold is not None:
+            # When we detected a natural break, trust it with lower minimum
+            final_threshold = max(10, min(150, smart_threshold))
+        else:
+            # Without natural break detection, use higher minimum for safety
+            final_threshold = max(25, min(150, smart_threshold))
         
         logger.debug(f"Smart gap calculation: "
                     f"median_height={median_height:.1f}, "
