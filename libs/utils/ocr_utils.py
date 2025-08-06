@@ -55,34 +55,45 @@ def ocr_onImage(image, east_model, debug=0, languages=None):
     # -- Perform OCR on text areas found ---
     ocr_results = {}
 
-    for i, box in enumerate(sorted_boxes):
+    # Iterate over columns and rows in the structure_info
+    for col_idx, column_rows in enumerate(structure_info.get('columns', [])):
+        for row_idx, row_boxes in enumerate(column_rows):
+            if not row_boxes:
+                continue
 
-        # Get cropped image
-        cropped_image = cropImage(image, box)
-    
-        # Apply pre-processing to enable better OCR results
-        processed_image = preprocess_for_ocr(cropped_image)
+            # Calculate row bounding box
+            min_x = min(box[0] for box in row_boxes)
+            min_y = min(box[1] for box in row_boxes)
+            max_x = max(box[2] for box in row_boxes)
+            max_y = max(box[3] for box in row_boxes)
 
-        if (debug >= 2):
-            cv2.imshow(f"Processed image {i}", processed_image)
+            # Get cropped image for the row
+            cropped_image = cropImage(image, (min_x, min_y, max_x, max_y))
+        
+            # Apply pre-processing to enable better OCR results
+            processed_image = preprocess_for_ocr(cropped_image)
 
-            key = cv2.waitKey(0)
-            cv2.destroyAllWindows()
+            if (debug >= 2):
+                cv2.imshow(f"Processed row C{col_idx+1}R{row_idx+1}", processed_image)
 
-            if key == 27:  # ESC key
-                logger.warning("ESC key pressed. Aborting execution.")
-                return {}
+                key = cv2.waitKey(0)
+                cv2.destroyAllWindows()
 
-        # Perform OCR on the corrected region with language support
-        # Use config settings if languages parameter is None
-        lang_to_use = languages if languages is not None else config.OCR_LANGUAGES
-        ocr_text = pytesseract.image_to_string(
-            processed_image,
-            lang=lang_to_use,
-            config=f"--psm {config.OCR_PSM_MODE}"
-        )
+                if key == 27:  # ESC key
+                    logger.warning("ESC key pressed. Aborting execution.")
+                    return {}
 
-        ocr_results[i] = ocr_text.strip()
+            # Perform OCR on the corrected region with language support
+            # Use config settings if languages parameter is None
+            lang_to_use = languages if languages is not None else config.OCR_LANGUAGES
+            ocr_text = pytesseract.image_to_string(
+                processed_image,
+                lang=lang_to_use,
+                config=f"--psm {config.OCR_PSM_MODE}"
+            )
+
+            # Store OCR result with column and row index
+            ocr_results[f"C{col_idx+1}R{row_idx+1}"] = ocr_text.strip()
 
     if (debug >= 2):
         cv2.destroyAllWindows()  # Ensure all windows are closed at the end
