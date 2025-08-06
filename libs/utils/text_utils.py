@@ -84,15 +84,68 @@ def get_language_charset(languages):
 
 
 def clean_ocr_text(text, languages=("de", "fr")):
-    """Cleans OCR text based on allowed characters for specific languages."""
+    """
+    Cleans OCR text based on allowed characters for specific languages.
+    
+    Improvements:
+    - Replaces unwanted characters with spaces instead of removing them
+    - Preserves numbers when they are part of words or standalone
+    - Preserves punctuation (. : / ; -) when part of words, removes when standalone
+    - Removes special characters like trademark symbols
+    - Normalizes multiple spaces to single spaces
+    
+    Args:
+        text (str): The text to clean
+        languages (tuple): Language codes for allowed character sets
+        
+    Returns:
+        str: Cleaned text with proper spacing and case normalization
+    """
     allowed_chars = get_language_charset(languages)
+    # Define punctuation that should be preserved when part of words
+    punctuation_to_preserve = ".:/;-"
+
+    # First, remove known problematic symbols before Unicode normalization
+    # to prevent them from being converted to valid characters
+    problematic_symbols = "™®©"
+    for symbol in problematic_symbols:
+        text = text.replace(symbol, " ")
 
     # Unicode normalization to represent inconsistent characters
     text = unicodedata.normalize("NFKC", text)
 
-    # Remove all characters that are not in the allowed character group
-    text = "".join(char for char in text if char in allowed_chars or char.isspace())
-
+    # Process character by character, with intelligent punctuation handling
+    cleaned_chars = []
+    for i, char in enumerate(text):
+        if char in allowed_chars or char.isspace():
+            # Keep allowed characters and existing spaces
+            cleaned_chars.append(char)
+        elif char.isdigit():
+            # Keep digits (they can be part of titles like "2nd Edition" or years like "2022")
+            cleaned_chars.append(char)
+        elif char in punctuation_to_preserve:
+            # Keep punctuation if:
+            # 1. Between alphanumeric characters (e.g., "8/9", "2.5")
+            # 2. Multiple punctuation together (e.g., "J.K.")
+            # 3. At the end of a word followed by space (e.g., "Title: Subtitle")
+            
+            has_char_before = i > 0 and (text[i-1].isalnum() or text[i-1] in punctuation_to_preserve)
+            has_char_after = i < len(text) - 1 and (text[i+1].isalnum() or text[i+1] in punctuation_to_preserve)
+            has_space_after = i < len(text) - 1 and text[i+1].isspace()
+            
+            if has_char_before and (has_char_after or has_space_after):
+                # Keep punctuation
+                cleaned_chars.append(char)
+            else:
+                # Standalone punctuation, replace with space
+                cleaned_chars.append(' ')
+        else:
+            # Replace unwanted characters with space
+            cleaned_chars.append(' ')
+    
+    # Join characters and normalize spaces
+    text = ''.join(cleaned_chars)
+    
     # Remove multiple spaces and convert text to lowercase
     text = re.sub(r"\s+", " ", text).strip().lower()
     

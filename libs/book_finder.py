@@ -149,15 +149,19 @@ class BookFinder:
 
                                 valid_text_regions = {}
                                 for region, detected_text in detected_texts.items():
+                                    
+                                    # Step 1: Clean the OCR text
                                     cleaned_text = clean_ocr_text(detected_text)
 
-                                    # Step 1: Apply word correction
-                                    corrected_text = match_to_words(cleaned_text)
+                                    # Step 2: Apply word correction
+                                    #corrected_text = match_to_words(cleaned_text)
+                                    
+                                    corrected_text = cleaned_text # Use the raw detected text for now
 
-                                    # Step 2: Compute validity AFTER correction
+                                    # Step 3: Compute validity AFTER correction
                                     corrected_validity_score = compute_validity_score(corrected_text)
 
-                                    logger.debug(f"    {region}: '{cleaned_text}' -> '{corrected_text}' (Rating: {corrected_validity_score:.2f} [ignored])")
+                                    #logger.debug(f"    {region}: '{cleaned_text}' -> '{corrected_text}' (Rating: {corrected_validity_score:.2f} [ignored])")
 
                                     valid_text_regions[region] = corrected_text
 
