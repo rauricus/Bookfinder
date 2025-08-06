@@ -42,12 +42,12 @@ def ocr_onImage(image, east_model, debug=0, languages=None):
 
     # Visualize all bounding boxes found.
     if debug >= 1:
-        if not showBoundingBoxes(image.copy(), sorted_boxes):
+        if not showBoundingBoxes(image, sorted_boxes):
             logger.warning("User aborted execution during bounding box visualization.")
             return {}
         
         # Visualize column and row structure
-        if not showColumnRowStructure(image.copy(), structure_info):
+        if not showColumnRowStructure(image, structure_info):
             logger.warning("User aborted execution during structure visualization.")
             return {}
 
