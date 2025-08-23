@@ -34,9 +34,6 @@ class BooksOnShelvesApp(Flask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Initialize logging
-        logging.basicConfig(level=logging.INFO)
-        
         # Initialize SocketManager and RunManager
         self.socket_manager = SocketManager(self)
         self.run_manager = RunManager(self.socket_manager)
