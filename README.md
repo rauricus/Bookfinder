@@ -55,15 +55,28 @@ python3 tests/test_lookup_utils.py
 * The text corrected against a word dictionary is then matched with known book titles.
 * If a book title actually isn't known, this might lead to over-correction. To avoid this, the script ompares the corrected title with the title matched against the books list. If the matched title is too far off the corrected title, it gets discarded.
 ### Getting book titles and the names of their authors.
-* A script uses a pragrmatic approach to get book titles in a specific language from OpenLibrary: we query common short words in a language; in the resulting list, we remove those where the language of the record does not match the language we are looking for. 
+* A script uses a pragmatic approach to get book titles in a specific language from OpenLibrary: we query common short words in a language; in the resulting list, we remove those where the language of the record does not match the language we are looking for. 
 * The meta data of books found like this is stored in a local DB. The book title list exported for SymSpell to use.
+* However, as this lead to many misses, an algorithm matching detected texts to works in the titles and author names DB has been disabled again.
 
 ## What am I currently working on
+### Validate found books against detected texts
+* Some book lookups lead to entirely wrong results.
+  * We should check if the found book actually contains or otherwise matches the previously detected text.
+  * If not, we should continue our lookup with the next data source.
+
+### Better search of Swisscovery
+* As mentioned elsewhere, the current Swisscovery lookup leads to almost no results, though the data looks very promsing.
+* Can we improve the lookup given the API means we have (i.e. no "any" lookups)?
+
+### Classify detected texts to improve the lookup
 * Determining where titles, subtitles and authors are located most of the time. The goal is to get a better detection of titles and subtitles, author names, publisher names and logos, and possibly additional book info.
   * The original idea was to train a object detection model to help identify the text areas, but that doesn't work: object detection is not good in this: text is a different type of beast.
   * The properly annotated Roboflow dataset (bookspine-text-blocks) can still be used to calculate, where titles and author names are typically located. This is what the script analysis/analyze_coco_textblocks.py does.
 * The plan is now to 1) keep identifying text blocks using the existing means (using EAST and OCR), but then 2) use the calculated, typical locations to help with classify text blocks as titles and authors, then 3) look up those.
   * This can't be a 100% perfect match, but it should especially help on avoiding publisher names and book infos in lookups.
+
+I'm not sure this is a good approach, though, as - similarly to using words from book titles and author names to correct detected texts -, this may lead to lots of misses. A more powerful search would probably help more.
 
 ## What is not there yet
 -
@@ -88,20 +101,21 @@ python3 tests/test_lookup_utils.py
     * Search in Swisscovery and Lobid GND often returns no results, because the book titles found on book spines often include the author names.
         * We can maybe detect (and remove) author names by comparing them against our authors database.
         * It would be nice to somehow detect author names because of their position and/or grouping on the book spine.
+    * Swisscovery would be ideal as our data source, but I can't properly search it using the SRU API: I have to know if a text is a "title" or "author", "any" queries do not seem to be supported.
+    * I have added Google Books as data source right after Swisscovery as a result of the above. Currently, most matches are coming from there. Those matches are often very good, but also sometimes just plain wrong. Still, this is a lot better than before and allows me to focus on the pipeline.
 
 ## Next steps
-* Improve book title lookup by trying to only look up by title.
+* Improve book title lookup?
+
+We could use the data from the analysis to classify some texts as likely to be the title or the author name, then do the lookup accordingly. I doubt this will lead to better matches as it probably causes a lot of misses. It would be better to e.g. have an "any" search in Swisscovery and a better analysis of its results.
 
 We can always improve text area detection and OCR later on. For now, it's more important to implement the whole pipeline to validate the approach.
 
 Only then I do the following:
 * Improve text area detection to focus on single words or lines.
 * Ensure OCR also knows about the language it's supposed to find. Pass it a "deu" and "eng", for example.
-* Switch out tesseract (again) with EasyOCR to improve or simplify OCR.
+* Maybe switch out tesseract (again) with EasyOCR to improve or simplify OCR.
 * Re-train the model using one of the larger book spine training sets using e.g. RoboFlow.
-
-Added a script using a pragrmatic approach to get book titles in a specific language from OpenLibrary: we search for common short words in a language; in the result list, we remove those where the language of the record does not match the language we are looking for. This is due to many entries being stored in English by default, but then their EDITIONS contain the actual, localized title. We can extract this in the future - it's too complex for now.
-
 
 ## Next steps for web app
 As soon as we have better detection, better OCR and received better book data:
