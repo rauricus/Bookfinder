@@ -32,7 +32,7 @@ python3 app.py
 # Perform a book detection & lookup using one of the included example photos.
 Point your browser at http://localhost:5010
 Supply a photo, e.g. example-files/books/Books_00005.png
-Click on "execute"
+Click on "run"
 
 # To run tests, e.g.
 python3 tests/test_lookup_utils.py
