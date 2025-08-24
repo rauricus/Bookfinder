@@ -227,11 +227,11 @@ def search_swisscovery(query_string, language="de"):
         }
         # Log the full request URL for debugging
         full_url = base_url + "?" + urllib.parse.urlencode(params)
-        logger.info(f"SRU-Request-URL: {full_url}")
+        logger.debug(f"SRU-Request-URL: {full_url}")
         response = requests.get(base_url, params=params, timeout=10)
         response.raise_for_status()
         xml_text = response.content.decode('utf-8')
-        logger.info(f"SRU-Response (first 500 chars): {xml_text[:500]}")
+        logger.debug(f"SRU-Response (first 500 chars): {xml_text[:500]}")
         if '<?xml' not in xml_text:
             xml_text = '<?xml version="1.0" encoding="UTF-8"?>\n' + xml_text
         try:
