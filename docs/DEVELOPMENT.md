@@ -1,12 +1,12 @@
-# Development Guide
+# Development guide
 
 Development guidelines and technical documentation for the Objekterkennung.yolo11 project.
 
-> **For AI Assistants**: This file contains important context information for working on this project.
+> **For AI assistants**: This file contains important context information for working on this project.
 
-## 🐍 Python Environment
+## Python environment
 
-### Micromamba Setup
+### Micromamba setup
 The project uses **Micromamba** as package manager:
 ```bash
 # Initialize shell dynamically (required before first activation in session)
@@ -22,19 +22,20 @@ micromamba activate yolo11
 python3 script_name.py
 ```
 
-**Important**: The shell must be initialized for Micromamba before environment activation works. Use the dynamic initialization `eval "$(micromamba shell hook --shell zsh)"` in each new terminal session, or run the permanent setup once with `micromamba shell init`.
+The shell must be initialized for Micromamba before environment activation works. Use the dynamic initialization `eval "$(micromamba shell hook --shell zsh)"` in each new terminal session, or run the permanent setup once with `micromamba shell init`.
 
 Add needed packages to yolo11.condaenv.yml, then execute 1_create-conda-env.sh to update the Micromamba environment, followed by 2_setup_jupyter.sh, in case you do some work with Jupyter.
 
+### Python execution
+- In the "yolo11" environment, use `python3`, not `python`
+- Execute scripts from project root
 
-### Python Execution
-- **Always use `python3`**, not `python`
-- Execute scripts from project root: `/Users/andreas/Documents/Projekte/Objekterkennung.yolo11`
-- For import issues: Add `sys.path.append()` for libs directory
 
-## 🧪 Test System
+## Test system
 
-### Test Structure
+There are only very few and very basic tests currently.
+
+### Test structure
 ```
 tests/
 ├── test_lookup_utils.py           # Unit Tests (Mock-based)
@@ -42,7 +43,7 @@ tests/
 └── test_clean_ocr_text.py         # Additional component tests
 ```
 
-### Test Execution
+### Test execution
 ```bash
 # Initialize shell for Micromamba (if not done permanently)
 eval "$(micromamba shell hook --shell zsh)"
@@ -58,7 +59,7 @@ python3 tests/test_lookup_utils_integration.py
 python3 -m unittest tests.test_lookup_utils.TestLookupUtils
 ```
 
-### Test Writing Guidelines
+### Test writing guidelines
 1. **Mock-based Unit Tests** for fast, offline validation
 2. **Integration Tests** for real API calls (slower)
 3. **Import fix** often needed:
@@ -67,13 +68,13 @@ python3 -m unittest tests.test_lookup_utils.TestLookupUtils
    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
    ```
 
-### Test Updates
+### Test updates
 - For API changes: If feasible, update tests first, then code. There are many missing tests still, however.
 - Base mock responses on real API responses
 - Use integration tests for API compatibility
 
 
-## 📝 Logging Conventions
+## Logging conventions
 
 ```python
 # Successful search
