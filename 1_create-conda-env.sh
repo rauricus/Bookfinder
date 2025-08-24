@@ -15,6 +15,24 @@ DICT_DIR="dictionaries"
 
 # Note that we currently DO NOT initialize homebrew here as fallback after conda.
 
+# Ensure that micromamba is available
+# Note that this has to be called even if you have the init code in .zshrc
+# because this script might be called from another shell or cron job (i.e. not interactive),
+# so we cannot rely on .zshrc being executed.
+export MAMBA_ROOT_PREFIX="${MAMBA_ROOT_PREFIX:-$HOME/micromamba}"
+if [ -x "$MAMBA_ROOT_PREFIX/bin/micromamba" ]; then
+  export MAMBA_EXE="$MAMBA_ROOT_PREFIX/bin/micromamba"
+fi
+
+if command -v micromamba >/dev/null 2>&1; then
+  eval "$(micromamba shell hook --shell zsh)"
+elif [ -n "${MAMBA_EXE:-}" ] && [ -x "$MAMBA_EXE" ]; then
+  eval "$($MAMBA_EXE shell hook --shell zsh)"
+else
+  echo "micromamba not found; install it or set MAMBA_EXE=/full/path/to/micromamba" >&2
+  exit 1
+fi
+
 # Initialize micromamba
 eval "$(micromamba shell hook --shell zsh)"
 
