@@ -1,10 +1,10 @@
 # Book Recognition & Lookup System
 
-Automatic recognition and lookup of books from photos or video streams.
+Recognition and lookup of books in photos or video streams.
 
 ## 🎯 Overview
 
-This project recognizes book spines in photos, extracts text via OCR, and looks up book details in various library databases.
+This project recognizes book spines in photos, extracts text via OCR, and looks up book details in various public library databases.
 
 ### Pipeline
 1. **Book Spine Detection** → YOLO11 OBB Model
