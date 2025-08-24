@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bücher finden</title>
+    <title>Find Books</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -69,37 +69,37 @@
     </style>
 </head>
 <body>
-    <h1>Bücher finden</h1>
+    <h1>Find Books</h1>
     <form action="/run" method="post">
-        <label for="source">Quelle (Pfad zu Bild oder Video):</label>
+        <label for="source">Source (Path to image or video):</label>
         <input type="text" id="source" name="source" required>
         <br><br>
-        <label for="debug">Debug-Level:</label>
+        <label for="debug">Debug Level:</label>
         <select id="debug" name="debug">
-            <option value="0" selected>Keine Debug-Ausgabe</option>
-            <option value="1">Erkannte Textbereiche zeigen (Level 1)</option>
-            <option value="2">Zusätzlich Textbilder vor OCR anzeigen (Level 2)</option>
+            <option value="0" selected>No debug output</option>
+            <option value="1">Show detected text areas (Level 1)</option>
+            <option value="2">Additionally show text images before OCR (Level 2)</option>
         </select>
         <br><br>
-        <button type="submit">Ausführen</button>
+        <button type="submit">Run</button>
     </form>
 
-    <h2>Frühere Bucherkennungen</h2>
+    <h2>Previous Book Detections</h2>
     <table border="1">
         <thead>
             <tr>
                 <th>Run ID</th>
-                <th>Startzeit</th>
-                <th>Endzeit</th>
-                <th>Anzahl Bücher</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Books Count</th>
                 <th>Status</th>
-                <th>Eingabedatei</th>
-                <th>Ausgabeverzeichnis</th>
+                <th>Input File</th>
+                <th>Output Directory</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td colspan="7" style="text-align: center;">Runs werden abgerufen...</td>
+                <td colspan="7" style="text-align: center;">Loading runs...</td>
             </tr>
         </tbody>
     </table>
@@ -119,9 +119,9 @@
                         row.innerHTML = `
                             <td><a href="/run?run_id=${run.run_id}" class="run-link">${run.run_id}</a></td>
                             <td>${run.start_time}</td>
-                            <td>${run.end_time || 'Läuft...'}</td>
+                            <td>${run.end_time || 'Running...'}</td>
                             <td>${run.books_detected || '0'}</td>
-                            <td>${run.end_time ? 'Abgeschlossen' : 'Läuft...'}</td>
+                            <td>${run.end_time ? 'Completed' : 'Running...'}</td>
                             <td>${run.input_file || '-'}</td>
                             <td>${run.output_dir || '-'}</td>
                         `;
@@ -129,7 +129,7 @@
                         tableBody.appendChild(row);
                     });
                 } else {
-                    tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Noch keine Runs vorhanden</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No runs available yet</td></tr>';
                 }
             } catch (error) {
                 console.error('Error fetching run history:', error);

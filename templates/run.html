@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bucherkennung läuft...</title>
+    <title>Book detection running...</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -148,20 +148,20 @@
     </style>
 </head>
 <body>
-    <a href="/" class="back-link">← Zurück zur Übersicht</a>
-    <h1>Bucherkennung Run #{{ run_id }}</h1>
+    <a href="/" class="back-link">← Back to Overview</a>
+    <h1>Book Detection Run #{{ run_id }}</h1>
     <div class="status" id="run-status"></div>
     <div>
-        <div class="tab active" id="bookspines-tab">Bücherrücken</div>
+        <div class="tab active" id="bookspines-tab">Book Spines</div>
         <div class="tab" id="log-tab">Log</div>
     </div>
     <div class="tab-content" id="log-content">
         <pre id="log-container">{{ log_content }}</pre>
-        <div id="log-placeholder" class="placeholder">Warte auf neue Logs...</div>
+        <div id="log-placeholder" class="placeholder">Waiting for new logs...</div>
     </div>
     <div class="tab-content active" id="bookspines-content">
         <div id="bookspines-list"></div>
-        <div id="bookspines-placeholder" class="placeholder">Noch keine Bücherrücken gefunden...</div>
+        <div id="bookspines-placeholder" class="placeholder">No book spines found yet...</div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
@@ -213,12 +213,12 @@
             const detailDiv = document.createElement('div');
             detailDiv.className = 'book-detail';
             detailDiv.innerHTML = `
-                <strong>Buchdetails:</strong><br>
-                Titel: ${lookup.title || 'Nicht verfügbar'}<br>
-                Autor(en): ${lookup.authors || 'Nicht verfügbar'}<br>
-                Jahr: ${lookup.year || 'Nicht verfügbar'}<br>
-                ISBN: ${lookup.isbn || 'Nicht verfügbar'}<br>
-                Quelle: ${lookup.source || 'Nicht verfügbar'}<br>
+                <strong>Book Details:</strong><br>
+                Title: ${lookup.title || 'Not available'}<br>
+                Author(s): ${lookup.authors || 'Not available'}<br>
+                Year: ${lookup.year || 'Not available'}<br>
+                ISBN: ${lookup.isbn || 'Not available'}<br>
+                Source: ${lookup.source || 'Not available'}<br>
                 ${lookup.gnd_identifier ? `GND: ${lookup.gnd_identifier}<br>` : ''}
                 ${lookup.wikidata_link ? `Wikidata: ${lookup.wikidata_link}<br>` : ''}
                 ${lookup.lobid_id ? `Lobid ID: ${lookup.lobid_id}<br>` : ''}
@@ -239,13 +239,13 @@
             // Create header
             const header = document.createElement('div');
             header.className = 'bookspine-header';
-            header.textContent = `Bücherrücken #${bookspineData.id}`;
+            header.textContent = `Book Spine #${bookspineData.id}`;
             
             // Create details container
             const detailsContainer = document.createElement('div');
             detailsContainer.className = 'bookspine-details';
             detailsContainer.id = `details-${bookspineData.id}`;
-            detailsContainer.innerHTML = '<div class="no-details">Keine Buchdetails verfügbar</div>';
+            detailsContainer.innerHTML = '<div class="no-details">No book details available</div>';
             
             // Create variants container
             const variantsContainer = document.createElement('div');
@@ -287,7 +287,7 @@
             
             // Determine if this is the original or rotated image
             const isRotated = variantData.image_path.includes('rotated-180');
-            const variantType = isRotated ? 'Rotiert (180°)' : 'Original';
+            const variantType = isRotated ? 'Rotated (180°)' : 'Original';
             
             // Create the variant content with image first, then type, then title
             let variantContent = '';
@@ -296,7 +296,7 @@
             const filename = variantData.image_path.split('/').pop();
             variantContent += `
                 <div class="image-placeholder" id="placeholder-${bookspineId}-${filename.replace(/\./g, '-')}">
-                    Lade Bild: ${filename}...
+                    Loading image: ${filename}...
                 </div>
             `;
             
@@ -304,7 +304,7 @@
             variantContent += `<div class="variant-type">${variantType}</div>`;
             
             // Add title
-            variantContent += `<div class="variant-title">Titel: ${variantData.title || 'Kein Titel erkannt'}</div>`;
+            variantContent += `<div class="variant-title">Title: ${variantData.title || 'No title detected'}</div>`;
             
             // Lookup information is now displayed in the details section above
             
@@ -335,14 +335,14 @@
                 const placeholderId = `placeholder-${bookspineId}-${filename.replace(/\./g, '-')}`;
                 const placeholder = document.getElementById(placeholderId);
                 if (placeholder) {
-                    placeholder.textContent = 'Bild konnte nicht geladen werden';
+                    placeholder.textContent = 'Image could not be loaded';
                     placeholder.style.color = '#d32f2f';
                 }
                 console.error(`Failed to load image: ${imageUrl}`);
             };
             
             img.src = imageUrl;
-            img.alt = variantData.title || 'Buchbild';
+            img.alt = variantData.title || 'Book image';
         }
 
         // Function to load bookspines from the server for a previous run
@@ -362,7 +362,7 @@
                 }
             } catch (error) {
                 console.error('Error loading bookspines:', error);
-                bookspinesPlaceholder.textContent = 'Fehler beim Laden der Bücherrücken';
+                bookspinesPlaceholder.textContent = 'Error loading book spines';
             }
         }
 
@@ -372,7 +372,7 @@
             loadBookspinesForRun();
             
             // Set status to completed
-            runStatus.textContent = 'Status: Abgeschlossen (Vorherige Ausführung)';
+            runStatus.textContent = 'Status: Completed (Previous execution)';
             runStatus.style.backgroundColor = '#e8f5e9';  // Light green
         } else {
             // In live mode, connect to socket.io
@@ -406,7 +406,7 @@
                     // Use the new addBookLookup function to add book details
                     console.log("Detection data received:", data); // Debug log to see what's received
                     addBookLookup(data.id, {
-                        source: data.source || 'Unbekannt',
+                        source: data.source || 'Unknown',
                         title: data.book_details.title,
                         authors: data.book_details.authors || data.book_details.author,
                         year: data.book_details.year,
