@@ -297,6 +297,93 @@ def search_swisscovery(query_string, language="de"):
         return None
 
 
+def search_google_books(query_string, language="de"):
+    """
+    Search in Google Books API.
+    Google Books API: https://developers.google.com/books/docs/v1/using
+    
+    Args:
+        query_string (str): The string with title, author, etc. of the book to search for.
+        language (str): The language of the book (default: "de").
+    
+    Returns:
+        dict: A dictionary with book details (title, authors, year, ISBN) or None if no book was found.
+    """
+    if not query_string:
+        logger.info("No title provided. Skipping Google Books lookup.")
+        return None
+
+    logger.info("🔎 Searching with Google Books...")
+
+    try:
+        base_url = "https://www.googleapis.com/books/v1/volumes"
+        params = {
+            "q": query_string,
+            "langRestrict": language,
+            "maxResults": 1,
+            "orderBy": "relevance"
+        }
+
+        # Log the full request URL for debugging
+        full_url = base_url + "?" + urllib.parse.urlencode(params)
+        logger.debug(f"Google Books API Request URL: {full_url}")
+
+        response = requests.get(base_url, params=params, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+        logger.debug(f"Google Books API Response (first 500 chars): {str(data)[:500]}")
+
+        if "items" in data and len(data["items"]) > 0:
+            book = data["items"][0]
+            volume_info = book.get("volumeInfo", {})
+            
+            # Store the raw JSON response
+            raw_response = json.dumps(data, ensure_ascii=False)
+            
+            # Extract basic information
+            title = volume_info.get("title")
+            authors = volume_info.get("authors", [])
+            published_date = volume_info.get("publishedDate")
+            industry_identifiers = volume_info.get("industryIdentifiers", [])
+            
+            # Process publication year
+            year = None
+            if published_date:
+                # Extract 4-digit year from date (could be YYYY, YYYY-MM, or YYYY-MM-DD)
+                year_match = re.search(r'\b(19|20)\d{2}\b', published_date)
+                year = year_match.group(0) if year_match else None
+            
+            # Process ISBN
+            isbn = None
+            for identifier in industry_identifiers:
+                if identifier.get("type") in ["ISBN_13", "ISBN_10"]:
+                    isbn = identifier.get("identifier")
+                    # Clean ISBN (remove hyphens and spaces)
+                    isbn = re.sub(r'[-\s]', '', isbn) if isbn else None
+                    break
+            
+            result = {
+                "title": title,
+                "authors": ", ".join(authors) if authors else None,
+                "year": year,
+                "isbn": isbn,
+                "_raw_response": raw_response
+            }
+            
+            return result
+        else:
+            logger.info(f"⚠️ No book found in Google Books for query: {query_string}")
+            return None
+
+    except requests.RequestException as e:
+        logger.error(f"❌ Error in Google Books request: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"❌ Error in Google Books processing: {e}")
+        return None
+
+
 def search_worldcat(query_string, language="de"):
     """
     Search in WorldCat via SRU interface.
@@ -474,6 +561,11 @@ def lookup_book_details(query_string, language="de", market="CH"):
         result = search_swisscovery(query_string, language)
         if result:
             return "Swisscovery", result
+
+    # Google Books as second option
+    result = search_google_books(query_string, language)
+    if result:
+        return "Google Books", result
 
     # Then DNB
     result = search_dnb(query_string, language)

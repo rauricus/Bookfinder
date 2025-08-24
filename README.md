@@ -11,7 +11,7 @@ This project recognizes book spines in photos, extracts text via OCR, and looks 
 2. **Text Area Detection** → EAST Model  
 3. **OCR** → Tesseract
 4. **Text Correction** → SymSpell + Dictionaries
-5. **Library Lookup** → Swisscovery, DNB, lobid GND, OpenLibrary
+5. **Library Lookup** → Swisscovery, Google Books, DNB, lobid GND, OpenLibrary
 
 ## 🚀 Quick Start
 

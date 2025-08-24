@@ -1,5 +1,8 @@
 import unittest
-from libs.utils.lookup_utils import search_openlibrary, search_lobid_gnd_work, search_dnb, search_worldcat
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from libs.utils.lookup_utils import search_openlibrary, search_lobid_gnd_work, search_dnb, search_worldcat, search_google_books
 
 class TestLookupUtilsIntegration(unittest.TestCase):
 
@@ -61,6 +64,19 @@ class TestLookupUtilsIntegration(unittest.TestCase):
 
     def test_lobid_nonexistent(self):
         result = search_lobid_gnd_work("asldkfjasldkfj-nichtvorhanden")
+        self.assertIsNone(result)
+
+    def test_google_books_query(self):
+        """Test actual Google Books API integration"""
+        result = search_google_books("Der Steppenwolf", language="de")
+        if result:  # Service may be unavailable or have rate limits
+            self.assertIn("Steppenwolf", result["title"])
+            print("Google Books:", result)
+        else:
+            print("Google Books: Service unavailable or no results found")
+
+    def test_google_books_nonexistent(self):
+        result = search_google_books("asldkfjasldkfj-nichtvorhanden", language="de")
         self.assertIsNone(result)
 
 if __name__ == "__main__":

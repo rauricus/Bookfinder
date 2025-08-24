@@ -1,8 +1,10 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import xml.etree.ElementTree as ET
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from libs.utils.lookup_utils import search_openlibrary, search_dnb, search_lobid_gnd_work, lookup_book_details
+from libs.utils.lookup_utils import search_openlibrary, search_dnb, search_lobid_gnd_work, lookup_book_details, search_google_books
 
 class TestLookupUtils(unittest.TestCase):
     @patch('libs.utils.lookup_utils.requests.get')
@@ -196,6 +198,67 @@ class TestLookupUtils(unittest.TestCase):
         self.assertIsNone(result)
         
         result = search_lobid_gnd_work(None)
+        self.assertIsNone(result)
+
+    @patch('libs.utils.lookup_utils.requests.get')
+    def test_search_google_books_success(self, mock_get):
+        # Simuliere eine erfolgreiche Antwort der Google Books API
+        fake_response = MagicMock()
+        fake_response.raise_for_status = lambda: None
+        fake_response.json.return_value = {
+            "items": [
+                {
+                    "volumeInfo": {
+                        "title": "Testbuch Google",
+                        "authors": ["Autor Google", "Co-Autor"],
+                        "publishedDate": "2021-05-15",
+                        "industryIdentifiers": [
+                            {
+                                "type": "ISBN_13",
+                                "identifier": "978-3-16-148410-0"
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+        mock_get.return_value = fake_response
+        
+        result = search_google_books("Testbuch Google", language="de")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["title"], "Testbuch Google")
+        self.assertEqual(result["authors"], "Autor Google, Co-Autor")
+        self.assertEqual(result["year"], "2021")
+        self.assertEqual(result["isbn"], "9783161484100")
+
+    @patch('libs.utils.lookup_utils.requests.get')
+    def test_search_google_books_no_result(self, mock_get):
+        # Simuliere, dass die API keine Treffer liefert
+        fake_response = MagicMock()
+        fake_response.raise_for_status = lambda: None
+        fake_response.json.return_value = {"items": []}
+        mock_get.return_value = fake_response
+
+        result = search_google_books("Nichtexistent", language="de")
+        self.assertIsNone(result)
+
+    @patch('libs.utils.lookup_utils.requests.get')
+    def test_search_google_books_no_items(self, mock_get):
+        # Simuliere eine Antwort ohne "items" key
+        fake_response = MagicMock()
+        fake_response.raise_for_status = lambda: None
+        fake_response.json.return_value = {"totalItems": 0}
+        mock_get.return_value = fake_response
+
+        result = search_google_books("Nichtexistent", language="de")
+        self.assertIsNone(result)
+
+    def test_search_google_books_empty_query(self):
+        """Test that empty query returns None"""
+        result = search_google_books("")
+        self.assertIsNone(result)
+        
+        result = search_google_books(None)
         self.assertIsNone(result)
 
 if __name__ == '__main__':
