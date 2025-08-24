@@ -4,7 +4,7 @@ Recognition and lookup of books in photos or video streams.
 
 ## 🎯 Overview
 
-This project recognizes book spines in photos, extracts text via OCR, and looks up book details in various public library databases.
+This code recognizes book spines in images, extracts text via OCR, and looks up those texts in various library databases to help you identify the books.
 
 ### Pipeline
 1. **Book Spine Detection** → YOLO11 OBB Model
