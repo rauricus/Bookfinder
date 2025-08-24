@@ -1,10 +1,39 @@
-# Looking up books
+# Book Recognition & Lookup System
 
-In this project, I attempt to look up all details on books captured in a photo or video stream.
+Automatic recognition and lookup of books from photos or video streams.
 
-The script first detects images of book spines in a photo (or a video stream). It extracts, corrects and pre-processes these images, then attempts to detect areas with text in each image. It then pre-processes a cropped image of each identified text area and runs OCR on its text. The text is pre-processed and then sent to APIs for looking up book titles. Finally, the result is presented to the user.
+## 🎯 Overview
 
-# Status
+This project recognizes book spines in photos, extracts text via OCR, and looks up book details in various library databases.
+
+### Pipeline
+1. **Book Spine Detection** → YOLO11 OBB Model
+2. **Text Area Detection** → EAST Model  
+3. **OCR** → Tesseract
+4. **Text Correction** → SymSpell + Dictionaries
+5. **Library Lookup** → Swisscovery, DNB, lobid GND, OpenLibrary
+
+## 🚀 Quick Start
+
+```bash
+# Activate environment
+micromamba activate yolo11
+
+# Run book recognition
+python3 app.py
+
+# Run tests
+python3 tests/test_lookup_utils.py
+```
+
+## 📚 Documentation
+
+- **[Development Guide](docs/DEVELOPMENT.md)** - Technical details & API documentation
+- **[Training Guide](docs/README.training.md)** - Model training documentation
+- **[Roo Code Setup](docs/Roo%20Code%20setup.md)** - Development environment setup (experimental)
+- **[Workflow Diagram](docs/workflow.planned.png)** - Visual project workflow overview
+
+## 🎯 Status
 ## What works
 ### Detect book spines
 * Book spines in a photo are recognized using a re-trained YOLO11 OBB model.
