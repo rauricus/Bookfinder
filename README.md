@@ -38,10 +38,10 @@ python3 tests/test_lookup_utils.py
 
 ## 📚 Documentation
 
-- **[Development Guide](docs/DEVELOPMENT.md)** - Technical details & API documentation
+- **[Development Guide](docs/DEVELOPMENT.md)** - Some technical details & guidelines
 - **[Training Guide](docs/README.training.md)** - Model training documentation
 - **[Roo Code Setup](docs/Roo%20Code%20setup.md)** - Development environment setup (experimental)
-- **[Workflow Diagram](docs/workflow.planned.png)** - Visual project workflow overview
+- **[Workflow Diagram](docs/workflow.planned.png)** - Visual overview of the built-in and planned workflow
 
 ## 🎯 Status
 ## What works
