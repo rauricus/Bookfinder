@@ -5,8 +5,13 @@ This script compares OCR results with and without language support.
 """
 
 import os
+import sys
 import cv2
 import pytesseract
+
+# Add the project root directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import config
 
 # List available Tesseract languages

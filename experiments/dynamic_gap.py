@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 # Add the project root directory to the Python path
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import config
 from libs.utils.ocr_utils import ocr_onImage, detect_text_regions
