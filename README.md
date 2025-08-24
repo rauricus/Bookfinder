@@ -74,6 +74,36 @@ python3 tests/test_lookup_utils.py
 ## What am I currently working on
 * I'm currently porting the Bookfinder server to Raspberry Pi OS.
 * The goal is to get this to run on a Raspberry Pi 3B+ with AI camera as I want to run this on a portable device.
+* The current state here is that Bookfinder installs and runs on Raspberry Pi OS right away.
+    * When starting a detection run, we get some 400 - bad request error at the beginning, but initialisation then finishes.
+    * Attempting a detection run results eventually in segmentation fault (see below). I'll have to investigate this.
+    * I'll also try to get my bookspine detection model to run on the IMX500 of the AI camera.
+
+
+```
+2025-08-24 22:16:40,550 - INFO - 📘 Bookfinder Server started and listening for requests on http://0.0.0.0:5010
+192.168.178.172 - - [24/Aug/2025 22:18:08] code 400, message Bad request version ('Qª\\x00"\\x13\\x01\\x13\\x03\\x13\\x02À+À/Ì©Ì¨À,À0À')
+192.168.178.172 - - [24/Aug/2025 22:18:08] "\x16\x03\x01\x07h\x01\x00\x07d\x03\x03Ê×À· Ï¹Í­(ï5\x14³\x82¦ÎóðrÚ\x85Ú+dï aî\x08±Y $û»r\x92a\x1aç\x94¼«àô§)Ï\x9d\x90\x80òÌQ+Vº©Iª\x98 Qª\x00"\x13\x01\x13\x03\x13\x02À+À/Ì©Ì¨À,À0À" 400 -
+192.168.178.172 - - [24/Aug/2025 22:18:08] code 400, message Bad request syntax ('\\x16\\x03\\x01\\x02\\x97\\x01\\x00\\x02\\x93\\x03\\x03\\x96@«Îîæ')
+192.168.178.172 - - [24/Aug/2025 22:18:08] "\x16\x03\x01\x02\x97\x01\x00\x02\x93\x03\x03\x96@«Îîæ" 400 -
+2025-08-24 22:20:54,478 - INFO - ✅ Loaded 80000 words for 'en'
+2025-08-24 22:20:54,887 - INFO - ✅ Loaded 100000 words for 'de'
+2025-08-24 22:20:54,888 - INFO - ✅ Loaded 100000 words for 'fr'
+2025-08-24 22:20:54,889 - INFO - ✅ Loaded 100000 words for 'it'
+2025-08-24 22:20:54,911 - ERROR - Dictionary file not found at /home/pi/Bookfinder/dictionaries/names.de.txt.
+2025-08-24 22:20:54,914 - ERROR - ❌ Failed to load dictionary: /home/pi/Bookfinder/dictionaries/names.de.txt
+2025-08-24 22:20:54,928 - ERROR - ❌ Failed to load name dictionary for 'de'
+2025-08-24 22:20:54,943 - ERROR - Dictionary file not found at /home/pi/Bookfinder/dictionaries/book_titles.de.txt.
+2025-08-24 22:20:54,944 - ERROR - ❌ Failed to load dictionary: /home/pi/Bookfinder/dictionaries/book_titles.de.txt
+2025-08-24 22:20:54,944 - ERROR - ❌ Failed to load book title dictionary for 'de'
+2025-08-24 22:20:54,952 - INFO - 🔍 Starting book detection...
+2025-08-24 22:20:54,971 - INFO - === Book detection starts at 24.08.2025 22:20 ===
+
+image 1/1 /home/pi/Bookfinder/example-files/books/Books_00003.png: 480x640 None6063.4ms
+Speed: 172.2ms preprocess, 6063.4ms inference, 133.5ms postprocess per image at shape (1, 3, 480, 640)
+Segmentation fault
+```
+
 
 
 ## What is not there yet
