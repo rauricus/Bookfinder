@@ -16,13 +16,23 @@ This project recognizes book spines in photos, extracts text via OCR, and looks 
 ## 🚀 Quick Start
 
 ```bash
-# Activate environment
-micromamba activate yolo11
+Install Mamba for managing all dependencies.
 
-# Run book recognition
+# Prepare environment using included (zsh) script
+./1_create-conda-env.sh
+
+# Activate environment
+mamba activate yolo11
+
+# Run the Bookfinder server
 python3 app.py
 
-# Run tests
+# Perform a book detection & lookup using one of the included example photos.
+Point your browser at http://localhost:5010
+Supply a photo, e.g. example-files/books/Books_00005.png
+Click on "execute"
+
+# To run tests, e.g.
 python3 tests/test_lookup_utils.py
 ```
 
