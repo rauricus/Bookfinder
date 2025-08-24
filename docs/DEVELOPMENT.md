@@ -9,7 +9,10 @@ Development guidelines and technical documentation for the Objekterkennung.yolo1
 ### Micromamba Setup
 The project uses **Micromamba** as package manager:
 ```bash
-# Initialize shell (first time setup)
+# Initialize shell dynamically (required before first activation in session)
+eval "$(micromamba shell hook --shell zsh)"
+
+# Initialize shell permanently (first time setup only)
 micromamba shell init --shell zsh --root-prefix=~/micromamba
 
 # Activate environment (if not automatically active)
@@ -18,6 +21,9 @@ micromamba activate yolo11
 # Execute Python scripts
 python3 script_name.py
 ```
+
+**Important**: The shell must be initialized for Micromamba before environment activation works. Use the dynamic initialization `eval "$(micromamba shell hook --shell zsh)"` in each new terminal session, or run the permanent setup once with `micromamba shell init`.
+
 Add needed packages to yolo11.condaenv.yml, then execute 1_create-conda-env.sh to update the Micromamba environment, followed by 2_setup_jupyter.sh, in case you do some work with Jupyter.
 
 
@@ -38,6 +44,10 @@ tests/
 
 ### Test Execution
 ```bash
+# Initialize shell for Micromamba (if not done permanently)
+eval "$(micromamba shell hook --shell zsh)"
+micromamba activate yolo11
+
 # Unit Tests
 python3 tests/test_lookup_utils.py
 
