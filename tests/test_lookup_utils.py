@@ -9,7 +9,7 @@ from libs.utils.lookup_utils import search_openlibrary, search_dnb, search_lobid
 class TestLookupUtils(unittest.TestCase):
     @patch('libs.utils.lookup_utils.requests.get')
     def test_search_openlibrary_success(self, mock_get):
-        # Simuliere eine erfolgreiche Antwort der OpenLibrary-API
+        # Simulate a successful OpenLibrary API response
         fake_response = MagicMock()
         fake_response.raise_for_status = lambda: None
         fake_response.json.return_value = {
@@ -33,18 +33,18 @@ class TestLookupUtils(unittest.TestCase):
 
     @patch('libs.utils.lookup_utils.requests.get')
     def test_search_openlibrary_no_result(self, mock_get):
-        # Simuliere, dass die API keine Treffer liefert
+        # Simulate that the API returns no results
         fake_response = MagicMock()
         fake_response.raise_for_status = lambda: None
         fake_response.json.return_value = {"docs": []}
         mock_get.return_value = fake_response
 
-        result = search_openlibrary("Nichtexistent", language="de")
+        result = search_openlibrary("NonExistent", language="de")
         self.assertIsNone(result)
 
     @patch('libs.utils.lookup_utils.requests.get')
     def test_search_dnb_success(self, mock_get):
-        # Simuliere eine erfolgreiche Antwort der DNB-API mit XML-Inhalt
+        # Simulate a successful DNB API response with XML content
         fake_xml = '''
         <searchRetrieveResponse xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:gndo="https://d-nb.info/standards/elementset/gnd#">
             <records>
@@ -73,7 +73,7 @@ class TestLookupUtils(unittest.TestCase):
 
     @patch('libs.utils.lookup_utils.requests.get')
     def test_search_swisscovery_offline(self, mock_get):
-        # Simuliere eine typische SRU-XML-Antwort von swisscovery
+        # Simulate a typical SRU XML response from Swisscovery
         fake_xml = '''
         <searchRetrieveResponse xmlns:marc="http://www.loc.gov/MARC21/slim">
             <records>
@@ -112,14 +112,14 @@ class TestLookupUtils(unittest.TestCase):
         self.assertEqual(result["isbn"], "9783161484100")
 
     def test_search_swisscovery_live(self):
-        # Live-Test: Fragt swisscovery wirklich ab
+        # Live test: Actually queries Swisscovery
         from libs.utils.lookup_utils import search_swisscovery
         result = search_swisscovery("Der Steppenwolf")
         if result is None:
-            self.skipTest("swisscovery nicht erreichbar oder kein Treffer.")
+            self.skipTest("Swisscovery not reachable or no results.")
         else:
             self.assertIn("Steppenwolf", result["title"])
-            # Jahr und ISBN sind optional, aber falls vorhanden, prüfen wir das Format
+            # Year and ISBN are optional, but if present, we check the format
             if result["year"]:
                 self.assertRegex(result["year"], r"\d{4}")
             if result["isbn"]:
@@ -202,7 +202,7 @@ class TestLookupUtils(unittest.TestCase):
 
     @patch('libs.utils.lookup_utils.requests.get')
     def test_search_google_books_success(self, mock_get):
-        # Simuliere eine erfolgreiche Antwort der Google Books API
+        # Simulate a successful Google Books API response
         fake_response = MagicMock()
         fake_response.raise_for_status = lambda: None
         fake_response.json.return_value = {
@@ -233,24 +233,24 @@ class TestLookupUtils(unittest.TestCase):
 
     @patch('libs.utils.lookup_utils.requests.get')
     def test_search_google_books_no_result(self, mock_get):
-        # Simuliere, dass die API keine Treffer liefert
+        # Simulate that the API returns no results
         fake_response = MagicMock()
         fake_response.raise_for_status = lambda: None
         fake_response.json.return_value = {"items": []}
         mock_get.return_value = fake_response
 
-        result = search_google_books("Nichtexistent", language="de")
+        result = search_google_books("NonExistent", language="de")
         self.assertIsNone(result)
 
     @patch('libs.utils.lookup_utils.requests.get')
     def test_search_google_books_no_items(self, mock_get):
-        # Simuliere eine Antwort ohne "items" key
+        # Simulate a response without "items" key
         fake_response = MagicMock()
         fake_response.raise_for_status = lambda: None
         fake_response.json.return_value = {"totalItems": 0}
         mock_get.return_value = fake_response
 
-        result = search_google_books("Nichtexistent", language="de")
+        result = search_google_books("NonExistent", language="de")
         self.assertIsNone(result)
 
     def test_search_google_books_empty_query(self):

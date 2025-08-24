@@ -46,10 +46,10 @@ class TestLookupUtilsIntegration(unittest.TestCase):
         result = search_lobid_gnd_work("Der Steppenwolf")
         self.assertIsNotNone(result)
         self.assertIn("Steppenwolf", result["title"])
-        # Test dass Autoren korrekt extrahiert werden
+        # Test that authors are correctly extracted
         if result["authors"]:
             self.assertIn("Hesse", result["authors"])
-        # Test dass Jahr extrahiert wird
+        # Test that year is extracted
         if result["year"]:
             self.assertEqual(result["year"], "1927")
         print("lobid gnd:", result)
