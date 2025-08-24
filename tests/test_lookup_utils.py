@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 import xml.etree.ElementTree as ET
 
-from libs.utils.lookup_utils import search_openlibrary, search_dnb, lookup_book_details
+from libs.utils.lookup_utils import search_openlibrary, search_dnb, search_lobid_gnd_work, lookup_book_details
 
 class TestLookupUtils(unittest.TestCase):
     @patch('libs.utils.lookup_utils.requests.get')
@@ -122,6 +122,81 @@ class TestLookupUtils(unittest.TestCase):
                 self.assertRegex(result["year"], r"\d{4}")
             if result["isbn"]:
                 self.assertRegex(result["isbn"], r"^97[89]\d{10}$|^\d{9}[\dX]$")
+
+    @patch('libs.utils.lookup_utils.requests.get')
+    def test_search_lobid_gnd_success(self, mock_get):
+        """Test successful lobid GND search with valid response"""
+        mock_response_data = {
+            "member": [
+                {
+                    "preferredName": "Der Steppenwolf",
+                    "firstAuthor": [{"label": "Hesse, Hermann"}],
+                    "dateOfPublication": ["1927"]
+                }
+            ]
+        }
+        
+        fake_response = MagicMock()
+        fake_response.raise_for_status = lambda: None
+        fake_response.json.return_value = mock_response_data
+        mock_get.return_value = fake_response
+        
+        result = search_lobid_gnd_work("Der Steppenwolf")
+        
+        self.assertIsNotNone(result)
+        self.assertEqual(result["title"], "Der Steppenwolf")
+        self.assertEqual(result["authors"], "Hesse, Hermann")
+        self.assertEqual(result["year"], "1927")
+        self.assertIsNone(result["isbn"])
+
+    @patch('libs.utils.lookup_utils.requests.get')
+    def test_search_lobid_gnd_with_acceptable_authors(self, mock_get):
+        """Test lobid GND search with author filtering"""
+        mock_response_data = {
+            "member": [
+                {
+                    "preferredName": "Der Steppenwolf",
+                    "firstAuthor": [{"label": "Anderer Autor"}]
+                },
+                {
+                    "preferredName": "Der Steppenwolf",
+                    "firstAuthor": [{"label": "Hesse, Hermann"}],
+                    "dateOfPublication": ["1927"]
+                }
+            ]
+        }
+        
+        fake_response = MagicMock()
+        fake_response.raise_for_status = lambda: None
+        fake_response.json.return_value = mock_response_data
+        mock_get.return_value = fake_response
+        
+        result = search_lobid_gnd_work("Der Steppenwolf", acceptable_authors=["Hesse"])
+        
+        self.assertIsNotNone(result)
+        self.assertEqual(result["title"], "Der Steppenwolf")
+        self.assertIn("Hesse", result["authors"])
+
+    @patch('libs.utils.lookup_utils.requests.get')
+    def test_search_lobid_gnd_no_results(self, mock_get):
+        """Test lobid GND search with no results"""
+        mock_response_data = {"member": []}
+        
+        fake_response = MagicMock()
+        fake_response.raise_for_status = lambda: None
+        fake_response.json.return_value = mock_response_data
+        mock_get.return_value = fake_response
+        
+        result = search_lobid_gnd_work("Nonexistent Book")
+        self.assertIsNone(result)
+
+    def test_search_lobid_gnd_empty_query(self):
+        """Test that empty query returns None"""
+        result = search_lobid_gnd_work("")
+        self.assertIsNone(result)
+        
+        result = search_lobid_gnd_work(None)
+        self.assertIsNone(result)
 
 if __name__ == '__main__':
     unittest.main()

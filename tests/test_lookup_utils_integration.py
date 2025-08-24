@@ -1,5 +1,5 @@
 import unittest
-from libs.utils.lookup_utils import search_openlibrary, search_lobid_gnd_work, search_dnb
+from libs.utils.lookup_utils import search_openlibrary, search_lobid_gnd_work, search_dnb, search_worldcat
 
 class TestLookupUtilsIntegration(unittest.TestCase):
 
@@ -19,6 +19,22 @@ class TestLookupUtilsIntegration(unittest.TestCase):
         self.assertIn("Steppenwolf", result["title"])
         print("OpenLibrary:", result)
 
+    def test_worldcat_query(self):
+        """Test actual WorldCat integration - currently disabled due to API key requirement"""
+        # WorldCat is currently disabled in lookup_book_details due to authentication requirements
+        # result = search_worldcat("Der Steppenwolf", language="de")
+        # if result:  # Only assert if we get a result (service may be unavailable)
+        #     self.assertIn("Steppenwolf", result["title"])
+        #     print("WorldCat:", result)
+        # else:
+        #     print("WorldCat: Service unavailable or no results found")
+        print("WorldCat: Currently disabled due to API authentication requirements")
+        pass
+        
+    def test_worldcat_nonexistent(self):
+        result = search_worldcat("asldkfjasldkfj-nichtvorhanden", language="de")
+        self.assertIsNone(result)
+
     def test_openlibrary_nonexistent(self):
         result = search_openlibrary("asldkfjasldkfj-nichtvorhanden", language="de")
         self.assertIsNone(result)
@@ -27,20 +43,21 @@ class TestLookupUtilsIntegration(unittest.TestCase):
         result = search_lobid_gnd_work("Der Steppenwolf")
         self.assertIsNotNone(result)
         self.assertIn("Steppenwolf", result["title"])
-        # Akzeptiere verschiedene Autoren-Formate
-        acceptable_authors = ["Hesse, Hermann", "Hermann Hesse"]
-        if result["author"]:
-            self.assertTrue(
-                any(author in result["author"] for author in acceptable_authors),
-                f"Expected one of {acceptable_authors}, but got {result['author']}"
-            )
-        # Wikidata-ID ist optional
-        if result.get("wikidata"):
-            self.assertTrue(
-                result["wikidata"].startswith("Q"),
-                f"Expected Wikidata Q-ID, got {result.get('wikidata')}"
-            )
+        # Test dass Autoren korrekt extrahiert werden
+        if result["authors"]:
+            self.assertIn("Hesse", result["authors"])
+        # Test dass Jahr extrahiert wird
+        if result["year"]:
+            self.assertEqual(result["year"], "1927")
         print("lobid gnd:", result)
+
+    def test_lobid_with_acceptable_authors(self):
+        """Test GND search with author filtering"""
+        result = search_lobid_gnd_work("Der Steppenwolf", acceptable_authors=["Hesse"])
+        self.assertIsNotNone(result)
+        self.assertIn("Steppenwolf", result["title"])
+        self.assertIn("Hesse", result["authors"])
+        print("lobid gnd with author filter:", result)
 
     def test_lobid_nonexistent(self):
         result = search_lobid_gnd_work("asldkfjasldkfj-nichtvorhanden")

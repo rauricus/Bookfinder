@@ -145,68 +145,62 @@ def search_lobid_gnd_work(query_string, acceptable_authors=None):
         response.raise_for_status()
         data = response.json()
 
-        if data.get("member"):
-            # If acceptable_authors is given, filter for them
-            if acceptable_authors:
-                for entry in data["member"]:
-                    title = entry.get("preferredName", "")
-                    # Extract Wikidata ID
-                    wikidata_id = None
-                    for entry_link in entry.get("sameAs", []):
-                        link = entry_link.get("id", "")
-                        if "wikidata.org/entity/" in link:
-                            wikidata_id = link.split("/")[-1]
-                            break
-                    # Try to extract author from various fields
-                    author = None
-                    author_fields = ["firstAuthor", "author", "creator"]
-                    for field in author_fields:
-                        if entry.get(field):
-                            if isinstance(entry[field], list) and len(entry[field]) > 0:
-                                author = entry[field][0].get("label")
-                                break
-                            elif isinstance(entry[field], dict):
-                                author = entry[field].get("label")
-                                break
-                    # Return the first work with a matching author
-                    if author and any(a in author for a in acceptable_authors):
-                        return {
-                            "id": entry.get("id"),
-                            "title": title,
-                            "author": author,
-                            "gndIdentifier": entry.get("gndIdentifier"),
-                            "wikidata": wikidata_id,
-                            "_raw_response": json.dumps(data, ensure_ascii=False)
-                        }
-            # Fallback: return the first result (no author filtering)
-            entry = data["member"][0]
-            title = entry.get("preferredName", "")
-            wikidata_id = None
-            for entry_link in entry.get("sameAs", []):
-                link = entry_link.get("id", "")
-                if "wikidata.org/entity/" in link:
-                    wikidata_id = link.split("/")[-1]
-                    break
-            author = None
-            author_fields = ["firstAuthor", "author", "creator"]
+        if not data.get("member"):
+            logger.info(f"⚠️ No book found for query: {query_string}")
+            return None
+
+        def extract_work_data(work):
+            """Extract standardized data from a GND work entry"""
+            work_title = work.get("preferredName", "")
+            
+            # Extract authors from different fields
+            authors = []
+            author_fields = ['firstAuthor', 'author', 'creator', 'contributor', 'editor']
+            
             for field in author_fields:
-                if entry.get(field):
-                    if isinstance(entry[field], list) and len(entry[field]) > 0:
-                        author = entry[field][0].get("label")
+                if work.get(field):
+                    if isinstance(work[field], list):
+                        for author in work[field]:
+                            if isinstance(author, dict) and author.get("label"):
+                                authors.append(author["label"])
+                    elif isinstance(work[field], dict) and work[field].get("label"):
+                        authors.append(work[field]["label"])
+            
+            # Extract Wikidata ID if available
+            wikidata_id = None
+            if work.get("sameAs"):
+                for link_entry in work["sameAs"]:
+                    if link_entry.get("id") and "wikidata.org/entity/" in link_entry["id"]:
+                        wikidata_id = link_entry["id"].split("/")[-1]
                         break
-                    elif isinstance(entry[field], dict):
-                        author = entry[field].get("label")
-                        break
+            
             return {
-                "id": entry.get("id"),
-                "title": title,
-                "author": author,
-                "gndIdentifier": entry.get("gndIdentifier"),
-                "wikidata": wikidata_id,
+                "title": work_title,
+                "authors": ", ".join(authors) if authors else None,
+                "author_list": authors,  # For filtering
+                "year": work.get("dateOfPublication", [None])[0] if work.get("dateOfPublication") else None,
+                "isbn": None,
+                # Additional GND-specific metadata (optional)
+                "gnd_id": work.get("gndIdentifier"),
+                "record_id": work.get("id"),
+                "wikidata_id": wikidata_id,
                 "_raw_response": json.dumps(data, ensure_ascii=False)
             }
-        logger.info(f"⚠️ No book found for query: {query_string}")
-        return None
+
+        # If acceptable_authors is given, filter for them
+        if acceptable_authors:
+            for work in data["member"]:
+                work_data = extract_work_data(work)
+                # Check if any author matches the acceptable authors
+                if work_data["author_list"] and any(any(accepted in author for accepted in acceptable_authors) for author in work_data["author_list"]):
+                    # Remove the helper field before returning
+                    del work_data["author_list"]
+                    return work_data
+        
+        # Return the first work (no author filtering)
+        work_data = extract_work_data(data["member"][0])
+        del work_data["author_list"]
+        return work_data
 
     except Exception as e:
         logger.error(f"❌ Error in lobid-GND request: {e}")
@@ -303,6 +297,160 @@ def search_swisscovery(query_string, language="de"):
         return None
 
 
+def search_worldcat(query_string, language="de"):
+    """
+    Search in WorldCat via SRU interface.
+    WorldCat SRU API: https://www.oclc.org/developer/develop/web-services/worldcat-search-api.en.html
+    
+    Args:
+        query_string (str): The string with title, author, etc. of the book to search for.
+        language (str): The language of the book (default: "de").
+    
+    Returns:
+        dict: A dictionary with book details (title, authors, year, ISBN) or None if no book was found.
+    """
+    if not query_string:
+        logger.info("No title provided. Skipping WorldCat lookup.")
+        return None
+
+    logger.info("🔎 Searching with WorldCat (SRU)...")
+
+    try:
+        base_url = "http://www.worldcat.org/webservices/catalog/search/sru"
+        params = {
+            "query": f'srw.ti="{query_string}"',
+            "operation": "searchRetrieve",
+            "version": "1.1",
+            "recordSchema": "info:srw/schema/1/marcxml-v1.1",
+            "maximumRecords": "1",
+            "startRecord": "1"
+        }
+
+        # Log the full request URL for debugging
+        full_url = base_url + "?" + urllib.parse.urlencode(params)
+        logger.debug(f"WorldCat SRU-Request-URL: {full_url}")
+
+        response = requests.get(base_url, params=params, timeout=15)
+        response.raise_for_status()
+
+        xml_text = response.content.decode('utf-8')
+        logger.debug(f"WorldCat SRU-Response (first 500 chars): {xml_text[:500]}")
+
+        # Ensure XML declaration
+        if '<?xml' not in xml_text:
+            xml_text = '<?xml version="1.0" encoding="UTF-8"?>\n' + xml_text
+
+        try:
+            root = ET.fromstring(xml_text)
+        except ET.ParseError as e:
+            logger.error(f"❌ WorldCat XML Parse Error: {e}\nResponse: {xml_text[:500]}")
+            return None
+
+        ns = {
+            'marc': 'http://www.loc.gov/MARC21/slim',
+            'srw': 'http://www.loc.gov/zing/srw/',
+            'diag': 'http://www.loc.gov/zing/srw/diagnostic/'
+        }
+
+        # Check for diagnostics (error messages from the SRU API)
+        diag = root.find('.//srw:diagnostics', ns)
+        if diag is not None:
+            diag_msg = diag.find('.//diag:message', ns)
+            diag_uri = diag.find('.//diag:uri', ns)
+            logger.error(f"❌ WorldCat SRU Diagnostic: {diag_msg.text if diag_msg is not None else ''} (Code: {diag_uri.text if diag_uri is not None else ''})")
+            return None
+
+        # Check number of records
+        num_records = root.find('.//srw:numberOfRecords', ns)
+        if num_records is not None and num_records.text == "0":
+            logger.info(f"⚠️ No book found in WorldCat for query: {query_string}")
+            return None
+
+        records = root.findall('.//marc:record', ns)
+        if not records:
+            logger.info(f"⚠️ No MARC records found in WorldCat for query: {query_string}")
+            return None
+
+        record = records[0]
+
+        def get_marc_subfield(record, tag, code):
+            """Extract MARC subfield value for a given tag and code"""
+            try:
+                for field in record.findall(f".//marc:datafield[@tag='{tag}']", ns):
+                    for subfield in field.findall(f"marc:subfield[@code='{code}']", ns):
+                        if subfield.text and subfield.text.strip():
+                            return subfield.text.strip()
+            except Exception as e:
+                logger.warning(f"⚠️ Error extracting WorldCat MARC field {tag}${code}: {e}")
+            return None
+
+        def get_marc_subfields(record, tag, codes):
+            """Extract multiple MARC subfield values for a given tag and codes"""
+            try:
+                values = []
+                for field in record.findall(f".//marc:datafield[@tag='{tag}']", ns):
+                    for code in codes:
+                        for subfield in field.findall(f"marc:subfield[@code='{code}']", ns):
+                            if subfield.text and subfield.text.strip():
+                                values.append(subfield.text.strip())
+                return values
+            except Exception as e:
+                logger.warning(f"⚠️ Error extracting WorldCat MARC field {tag}: {e}")
+                return []
+
+        # Extract book information
+        title = get_marc_subfield(record, '245', 'a')
+        if title:
+            # Clean title (remove trailing punctuation)
+            title = re.sub(r'[/:;,.]$', '', title).strip()
+
+        # Extract authors (main and additional)
+        authors = []
+        main_author = get_marc_subfield(record, '100', 'a')
+        if main_author:
+            authors.append(re.sub(r',$', '', main_author))
+        
+        additional_authors = get_marc_subfields(record, '700', ['a'])
+        for author in additional_authors:
+            clean_author = re.sub(r',$', '', author)
+            if clean_author not in authors:
+                authors.append(clean_author)
+
+        # Extract publication year
+        year = (get_marc_subfield(record, '264', 'c') or 
+                get_marc_subfield(record, '260', 'c'))
+        if year:
+            # Extract 4-digit year
+            year_match = re.search(r'\b(19|20)\d{2}\b', year)
+            year = year_match.group(0) if year_match else None
+
+        # Extract ISBN
+        isbn = get_marc_subfield(record, '020', 'a')
+        if isbn:
+            # Clean ISBN (extract first valid ISBN - 10 or 13 digits)
+            isbn_cleaned = re.sub(r'[^0-9X]', '', isbn.upper())
+            # Try to match 13-digit ISBN first, then 10-digit ISBN
+            isbn_match = re.search(r'(978\d{10}|979\d{10}|\d{9}[\dX])', isbn_cleaned)
+            isbn = isbn_match.group(0) if isbn_match else None
+
+        result = {
+            "title": title,
+            "authors": ", ".join(authors) if authors else None,
+            "year": year,
+            "isbn": isbn,
+            "_raw_response": xml_text
+        }
+
+        return result
+
+    except requests.RequestException as e:
+        logger.error(f"❌ Error in WorldCat request: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"❌ Error in WorldCat processing: {e}")
+        return None
+
+
 def lookup_book_details(query_string, language="de", market="CH"):
     """
     Lookup book details from multiple sources and return the first successful result.
@@ -310,7 +458,7 @@ def lookup_book_details(query_string, language="de", market="CH"):
     Args:
         query_string (str): The query string to search for
         language (str): The language code (default: "de")
-        market (str): Marktpräferenz, z.B. "CH" für Schweiz
+        market (str): Market preference, e.g. "CH" for Switzerland
         
     Returns:
         tuple: (source, result) where source is the name of the source that provided the result
@@ -321,16 +469,22 @@ def lookup_book_details(query_string, language="de", market="CH"):
         logger.info("No title provided. Skipping lookup.")
         return None, None
 
-    # Für Schweizer Markt: Swisscovery zuerst
+    # For Swiss market: Swisscovery first
     if market == "CH":
         result = search_swisscovery(query_string, language)
         if result:
             return "Swisscovery", result
 
-    # Dann DNB
+    # Then DNB
     result = search_dnb(query_string, language)
     if result:
         return "DNB", result
+
+    # WorldCat as additional international source (currently disabled - requires API key)
+    # logger.info("🔄 Searching with WorldCat...")
+    # result = search_worldcat(query_string, language)
+    # if result:
+    #     return "WorldCat", result
 
     # Fallback: OpenLibrary
     logger.info("🔄 Fallback: Searching with OpenLibrary...")
