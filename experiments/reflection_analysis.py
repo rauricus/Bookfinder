@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Reflexionslinien-Analyse für Buchcover OCR
-Testet verschiedene Methoden zur Behandlung von weißen Reflexionslinien
+Reflection lines analysis for book cover OCR
+Tests various methods for handling white reflection lines
 
-Verwendung:
-python reflection_test.py <bild_pfad>
+Usage:
+python reflection_test.py <image_path>
 """
 
 import sys
@@ -36,18 +36,18 @@ except ImportError:
 
 def detect_horizontal_reflections(img):
     """
-    Detektiert horizontale weiße Reflexionslinien
+    Detects horizontal white reflection lines
     """
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img.copy()
     
-    # Finde sehr helle horizontale Strukturen
+    # Find very bright horizontal structures
     horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (img.shape[1]//3, 1))
     tophat = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, horizontal_kernel)
     
-    # Schwellenwert für Reflexionen
+    # Threshold for reflections
     _, reflection_mask = cv2.threshold(tophat, 20, 255, cv2.THRESH_BINARY)
     
-    # Statistiken über Reflexionslinien
+    # Statistics about reflection lines
     reflection_pixels = np.sum(reflection_mask == 255)
     total_pixels = reflection_mask.shape[0] * reflection_mask.shape[1]
     reflection_percentage = (reflection_pixels / total_pixels) * 100
@@ -56,29 +56,29 @@ def detect_horizontal_reflections(img):
 
 def remove_reflections_method1(img):
     """
-    Methode 1: Inpainting - Reflexionslinien durch Interpolation ersetzen
+    Method 1: Inpainting - Replace reflection lines with interpolation
     """
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img.copy()
     
-    # Reflexionslinien detektieren
+    # Detect reflection lines
     reflection_mask, _ = detect_horizontal_reflections(img)
     
-    # Maske etwas erweitern für besseres Inpainting
+    # Expand mask slightly for better inpainting
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 3))
     reflection_mask = cv2.morphologyEx(reflection_mask, cv2.MORPH_DILATE, kernel)
     
-    # Inpainting anwenden
+    # Apply inpainting
     result = cv2.inpaint(gray, reflection_mask, 3, cv2.INPAINT_TELEA)
     
     return result
 
 def remove_reflections_method2(img):
     """
-    Methode 2: Morphologische Opening - Entfernt dünne helle Linien
+    Method 2: Morphological Opening - Removes thin bright lines
     """
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img.copy()
     
-    # Morphologische Opening um dünne helle Linien zu entfernen
+    # Morphological opening to remove thin bright lines
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 3))
     opened = cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel)
     
@@ -86,26 +86,26 @@ def remove_reflections_method2(img):
 
 def remove_reflections_method3(img):
     """
-    Methode 3: Adaptive Schwellenwert-Dämpfung
+    Method 3: Adaptive threshold dampening
     """
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img.copy()
     
-    # Finde lokale Maxima (potentielle Reflexionen)
+    # Find local maxima (potential reflections)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     
-    # Bereiche, die viel heller sind als ihre Umgebung, dämpfen
+    # Dampen areas that are much brighter than their surroundings
     diff = gray.astype(np.float32) - blurred.astype(np.float32)
     
-    # Nur sehr helle Bereiche dämpfen
+    # Only dampen very bright areas
     mask = diff > 30
     result = gray.copy().astype(np.float32)
-    result[mask] = result[mask] * 0.7  # Reflexionen um 30% abdunkeln
+    result[mask] = result[mask] * 0.7  # Darken reflections by 30%
     
     return result.astype(np.uint8)
 
 def apply_current_preprocessing(img):
     """
-    Aktuelle Preprocessing-Pipeline (reduziert)
+    Current preprocessing pipeline (reduced)
     """
     if not LIBS_AVAILABLE:
         return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img.copy()
@@ -115,7 +115,7 @@ def apply_current_preprocessing(img):
 
 def test_ocr_method(img, method_name, save_debug=False):
     """
-    Testet OCR auf einem verarbeiteten Bild
+    Tests OCR on a processed image
     """
     print(f"\n--- {method_name} ---")
     
@@ -129,11 +129,11 @@ def test_ocr_method(img, method_name, save_debug=False):
         
         processing_time = time.time() - start_time
         
-        print(f"✅ Verarbeitungszeit: {processing_time:.2f} Sekunden")
-        print(f"📝 Textlänge: {len(text)} Zeichen")
-        print(f"📖 Erkannter Text: '{text}'")
+        print(f"✅ Processing time: {processing_time:.2f} seconds")
+        print(f"📝 Text length: {len(text)} characters")
+        print(f"📖 Detected text: '{text}'")
         
-        # Suche nach bekannten Wörtern
+        # Search for known words
         known_words = ['ORHAN', 'PAMUK', 'DIE', 'ROTHAARIGE', 'ROTH']
         found_words = []
         text_upper = text.upper()
@@ -142,12 +142,12 @@ def test_ocr_method(img, method_name, save_debug=False):
                 found_words.append(word)
         
         if found_words:
-            print(f"🎯 Erkannte Schlüsselwörter: {', '.join(found_words)}")
+            print(f"🎯 Detected keywords: {', '.join(found_words)}")
         
         if save_debug:
             debug_filename = f"debug_reflection_{method_name.lower().replace(' ', '_').replace('(', '').replace(')', '')}.jpg"
             cv2.imwrite(debug_filename, img)
-            print(f"💾 Debug-Bild gespeichert: {debug_filename}")
+            print(f"💾 Debug image saved: {debug_filename}")
         
         return {
             'text': text,
@@ -158,7 +158,7 @@ def test_ocr_method(img, method_name, save_debug=False):
         }
         
     except Exception as e:
-        print(f"❌ OCR fehlgeschlagen: {e}")
+        print(f"❌ OCR failed: {e}")
         return {
             'text': '',
             'length': 0,
@@ -170,83 +170,83 @@ def test_ocr_method(img, method_name, save_debug=False):
 
 def analyze_reflections(img_path):
     """
-    Führt umfassende Reflexionslinien-Analyse durch
+    Performs comprehensive reflection lines analysis
     """
-    print(f"🔍 Analysiere Reflexionslinien in: {img_path}")
+    print(f"🔍 Analyzing reflection lines in: {img_path}")
     
-    # Bild laden
+    # Load image
     img = cv2.imread(str(img_path))
     if img is None:
-        print(f"❌ Fehler: Bild {img_path} konnte nicht geladen werden")
+        print(f"❌ Error: Image {img_path} could not be loaded")
         return
     
-    print(f"📏 Bildgröße: {img.shape}")
+    print(f"📏 Image size: {img.shape}")
     
-    # Reflexionsanalyse
-    print("\n🔬 Reflexionslinien-Analyse...")
+    # Reflection analysis
+    print("\n🔬 Reflection lines analysis...")
     reflection_mask, reflection_percentage = detect_horizontal_reflections(img)
-    print(f"📊 Reflexionsanteil: {reflection_percentage:.2f}% der Bildfläche")
+    print(f"📊 Reflection percentage: {reflection_percentage:.2f}% of image area")
     
-    # Reflexionsmaske speichern
+    # Save reflection mask
     cv2.imwrite("debug_reflection_mask.jpg", reflection_mask)
-    print("💾 Reflexionsmaske gespeichert: debug_reflection_mask.jpg")
+    print("💾 Reflection mask saved: debug_reflection_mask.jpg")
     
-    # Graustufen-Original
+    # Grayscale original
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     
     results = []
     
-    # Test 1: Original ohne Preprocessing
-    result = test_ocr_method(gray, "Original (ohne Preprocessing)", save_debug=True)
+    # Test 1: Original without preprocessing
+    result = test_ocr_method(gray, "Original (without preprocessing)", save_debug=True)
     results.append(result)
     
-    # Test 2: Aktuelles Preprocessing (nur Unsharp Mask)
+    # Test 2: Current preprocessing (only Unsharp Mask)
     current_processed = apply_current_preprocessing(img)
-    result = test_ocr_method(current_processed, "Aktuell (Unsharp Mask)", save_debug=True)
+    result = test_ocr_method(current_processed, "Current (Unsharp Mask)", save_debug=True)
     results.append(result)
     
-    # Test 3: Reflexionsentfernung Methode 1 (Inpainting)
+    # Test 3: Reflection removal Method 1 (Inpainting)
     method1 = remove_reflections_method1(img)
     method1_sharpened = unsharp_mask(method1) if LIBS_AVAILABLE else method1
     result = test_ocr_method(method1_sharpened, "Inpainting + Unsharp", save_debug=True)
     results.append(result)
     
-    # Test 4: Reflexionsentfernung Methode 2 (Morphologisch)
+    # Test 4: Reflection removal Method 2 (Morphological)
     method2 = remove_reflections_method2(img)
     method2_sharpened = unsharp_mask(method2) if LIBS_AVAILABLE else method2
     result = test_ocr_method(method2_sharpened, "Morphological + Unsharp", save_debug=True)
     results.append(result)
     
-    # Test 5: Reflexionsentfernung Methode 3 (Adaptive Dämpfung)
+    # Test 5: Reflection removal Method 3 (Adaptive dampening)
     method3 = remove_reflections_method3(img)
     method3_sharpened = unsharp_mask(method3) if LIBS_AVAILABLE else method3
-    result = test_ocr_method(method3_sharpened, "Adaptive Dämpfung + Unsharp", save_debug=True)
+    result = test_ocr_method(method3_sharpened, "Adaptive Dampening + Unsharp", save_debug=True)
     results.append(result)
     
-    # Ergebnisse zusammenfassen
+    # Summarize results
     print("\n" + "="*80)
-    print("📊 REFLEXIONSLINIEN-TEST ERGEBNISSE")
+    print("📊 REFLECTION LINES TEST RESULTS")
     print("="*80)
     
-    # Nach Anzahl erkannter Schlüsselwörter sortieren
+    # Sort by number of detected keywords
     results.sort(key=lambda x: len(x.get('keywords', [])), reverse=True)
     
-    print(f"{'Rang':<4} {'Methode':<35} {'Zeichen':<8} {'Zeit(s)':<8} {'Schlüsselwörter':<20}")
+    print(f"{'Rank':<4} {'Method':<35} {'Chars':<8} {'Time(s)':<8} {'Keywords':<20}")
     print("-" * 80)
     
     for i, result in enumerate(results, 1):
         keywords = ', '.join(result.get('keywords', []))
         if not keywords:
-            keywords = "keine"
+            keywords = "none"
         
         print(f"{i:<4} {result['method']:<35} {result['length']:<8} {result['time']:<8.2f} {keywords:<20}")
     
-    # Beste Methode für Schlüsselwort-Erkennung
+    # Best method for keyword recognition
     best_for_keywords = results[0]
-    print(f"\n🏆 BESTE METHODE FÜR SCHLÜSSELWÖRTER: {best_for_keywords['method']}")
+    print(f"\n🏆 BEST METHOD FOR KEYWORDS: {best_for_keywords['method']}")
     if best_for_keywords.get('keywords'):
-        print(f"🎯 Erkannte Schlüsselwörter: {', '.join(best_for_keywords['keywords'])}")
-    print(f"📝 Volltext: '{best_for_keywords['text']}'")
+        print(f"🎯 Detected keywords: {', '.join(best_for_keywords['keywords'])}")
+    print(f"📝 Full text: '{best_for_keywords['text']}'")
     
     # Visualisierung erstellen
     create_visualization(img, reflection_mask, method1, method2, method3)
@@ -284,38 +284,38 @@ def create_visualization(original, reflection_mask, method1, method2, method3):
         axes[1,1].set_title("Morphological Opening")
         axes[1,1].axis('off')
         
-        # Methode 3: Adaptive Dämpfung
+        # Method 3: Adaptive dampening
         axes[1,2].imshow(method3, cmap='gray')
-        axes[1,2].set_title("Adaptive Dämpfung")
+        axes[1,2].set_title("Adaptive Dampening")
         axes[1,2].axis('off')
         
         plt.tight_layout()
         plt.savefig("reflection_analysis_comparison.png", dpi=300, bbox_inches='tight')
         plt.close()
         
-        print("\n📊 Visualisierung gespeichert: reflection_analysis_comparison.png")
+        print("\n📊 Visualization saved: reflection_analysis_comparison.png")
         
     except Exception as e:
-        print(f"⚠️ Visualisierung fehlgeschlagen: {e}")
+        print(f"⚠️ Visualization failed: {e}")
 
 def main():
-    parser = argparse.ArgumentParser(description='Reflexionslinien-Analyse für Buchcover OCR')
-    parser.add_argument('image_path', help='Pfad zum zu analysierenden Bild')
+    parser = argparse.ArgumentParser(description='Reflection lines analysis for book cover OCR')
+    parser.add_argument('image_path', help='Path to the image to analyze')
     
     args = parser.parse_args()
     
-    # Pfad validieren
+    # Validate path
     img_path = Path(args.image_path)
     if not img_path.exists():
-        print(f"❌ Fehler: Bild {img_path} existiert nicht")
+        print(f"❌ Error: Image {img_path} does not exist")
         return 1
     
-    # Verfügbarkeit prüfen
-    print("🔧 Verfügbarkeit prüfen...")
-    print(f"✅ Tesseract: Verfügbar")
-    print(f"{'✅' if LIBS_AVAILABLE else '❌'} libs.utils: {'Verfügbar' if LIBS_AVAILABLE else 'Nicht verfügbar'}")
+    # Check availability
+    print("🔧 Checking availability...")
+    print(f"✅ Tesseract: Available")
+    print(f"{'✅' if LIBS_AVAILABLE else '❌'} libs.utils: {'Available' if LIBS_AVAILABLE else 'Not available'}")
     
-    # Analyse durchführen
+    # Perform analysis
     analyze_reflections(img_path)
     
     return 0
