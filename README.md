@@ -2,7 +2,7 @@
 
 Recognition and lookup of books in photos or video streams.
 
-## 🎯 Overview
+## Overview
 
 This code recognizes book spines in images, extracts text via OCR, and looks up those texts in various library databases to help you identify the books.
 
@@ -13,7 +13,13 @@ This code recognizes book spines in images, extracts text via OCR, and looks up 
 4. **Text Correction** → SymSpell + Dictionaries
 5. **Library Lookup** → Swisscovery, Google Books, DNB, lobid GND, OpenLibrary
 
-## 🚀 Quick Start
+## Help wanted
+
+**Contributions are very welcome!**
+
+I know a bit of everything, but not enough currently to make this working truly great. Ping me, if you want to help in improving image processing, text detection and the AI model.
+
+## Quick Start
 
 Note that his been developed on macOS. I'm not sure to what extend the Bookfinder runs on other OSes, though I've taken some effort to keep it portable and to make sure it's easy to install.
 
@@ -38,7 +44,7 @@ Click on "run"
 python3 tests/test_lookup_utils.py
 ```
 
-## 📚 Documentation
+## Documentation
 
 - **[Development Guide](docs/DEVELOPMENT.md)** - Some technical details & guidelines
 - **[Training Guide](docs/README.training.md)** - Model training documentation
