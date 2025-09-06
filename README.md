@@ -17,7 +17,7 @@ This code recognizes book spines in images, extracts text via OCR, and looks up 
 
 **Contributions are very welcome!**
 
-I know a bit of everything, but not enough currently to make this work truly great. This is a truly interdisciplinary project that requires expertise on many levels and several fields - which is why I started it in the first place.
+I know a bit of everything, but not enough currently to make this work truly great. This is a truly interdisciplinary project that requires expertise on many levels and in several fields - which is why I started it in the first place.
 
 Ping me, if you believe you can help with improving image processing, text detection, data lookup or the AI model. Or with whatever you think needs improvement.
 
