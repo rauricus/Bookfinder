@@ -17,7 +17,7 @@ This code recognizes book spines in images, extracts text via OCR, and looks up 
 
 **Contributions are very welcome!**
 
-I know a bit of everything, but not enough currently to make this work truly great. This is a truly interdisciplinary project that requires expertise in several fields and topics - which is why I started it in the first place!
+I know a bit of everything, but not enough currently to make this work truly great. This is an interdisciplinary project that requires expertise in several fields and topics - which is why I started it in the first place!
 
 Ping me, if you believe you can help with improving image processing, text detection, data lookup or the AI model. Or with whatever you think needs improvement.
 
@@ -80,13 +80,16 @@ python3 tests/test_lookup_utils.py
 * However, as this lead to many misses, an algorithm matching detected texts to works in the titles and author names DB has been disabled again.
 
 ## What am I currently working on
-* I'm currently porting the Bookfinder server to Raspberry Pi OS.
-* The goal is to get this to run on a Raspberry Pi 3B+ with AI camera as I want to run this on a portable device.
-* The current state here is that Bookfinder installs and runs on Raspberry Pi OS right away.
-    * When starting a detection run, we get some 400 - bad request error at the beginning, but initialisation then finishes.
-    * Attempting a detection run results eventually in segmentation fault (see below). I'll have to investigate this.
-    * I'll also try to get my bookspine detection model to run on the IMX500 of the AI camera.
-
+* I'm currently optimizing Bookfinder to run reliably on a Raspberry Pi 3B+ with AI camera as I want to create a portable device.
+* Current status and optimization steps:
+  1. **Memory Management**: Increasing swap space from the default 100MB to 2GB to prevent segmentation faults
+  2. **Two-Stage Processing Pipeline**:
+     * Running book spine detection (YOLO) on significantly downsized images to reduce memory usage
+     * Extracting high-resolution book spine crops from the original image for OCR processing
+     * This preserves text quality while drastically reducing memory requirements
+  3. **Model Optimization**: Exploring quantization of the YOLO and EAST models to reduce memory footprint
+  4. **Memory Cleanup**: Ensuring each pipeline stage releases resources before proceeding to the next
+* The segmentation fault issue (see below) is being addressed through these optimizations:
 
 ```
 2025-08-24 22:16:40,550 - INFO - 📘 Bookfinder Server started and listening for requests on http://0.0.0.0:5010
@@ -112,6 +115,7 @@ Speed: 172.2ms preprocess, 6063.4ms inference, 133.5ms postprocess per image at 
 Segmentation fault
 ```
 
+* After these optimizations, I'll explore running the book spine detection model on the IMX500 AI processor of the camera.
 
 
 ## What is not there yet
