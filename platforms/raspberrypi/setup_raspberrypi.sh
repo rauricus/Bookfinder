@@ -159,6 +159,7 @@ install_system_dependencies() {
         "wget"             # For downloading files
         "curl"             # Alternative download tool
         "unzip"            # For extracting archives
+        "zsh"              # Required for project setup script
         
         # System monitoring utilities
         "htop"             # Process monitoring
@@ -224,7 +225,8 @@ setup_conda_environment() {
     
     if [ -f "1_create-conda-env.sh" ]; then
         log_info "Running existing conda environment setup script..."
-        bash "1_create-conda-env.sh"
+        # Execute with zsh as the script requires zsh-specific syntax
+        zsh "1_create-conda-env.sh"
         log_success "Python environment '$CONDA_ENV_NAME' configured via project script"
     else
         log_error "Project setup script '1_create-conda-env.sh' not found!"
