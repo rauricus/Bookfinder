@@ -126,12 +126,14 @@ configure_swap() {
     sudo dphys-swapfile setup
     sudo dphys-swapfile swapon
     
-    # Verify new swap size
+    # Verify new swap size (allow small rounding differences)
     local new_swap=$(free -m | grep Swap | awk '{print $2}')
-    if [ "$new_swap" -ge "$TARGET_SWAP_SIZE" ]; then
-        log_success "Swap successfully configured to ${new_swap}MB"
+    local minimum_acceptable=$((TARGET_SWAP_SIZE - 10))  # Allow 10MB tolerance
+    
+    if [ "$new_swap" -ge "$minimum_acceptable" ]; then
+        log_success "Swap successfully configured to ${new_swap}MB (target: ${TARGET_SWAP_SIZE}MB)"
     else
-        log_error "Failed to configure swap. Current size: ${new_swap}MB"
+        log_error "Failed to configure swap. Current size: ${new_swap}MB, expected: ~${TARGET_SWAP_SIZE}MB"
         exit 1
     fi
 }
