@@ -71,6 +71,10 @@ class BooksOnShelvesApp(Flask):
             source = request.form.get("source")
             debug = request.form.get("debug", "0")
             
+            # Debug logging to see what we actually received
+            logger.debug(f"🔍 Received source parameter: '{source}'")
+            logger.debug(f"🔍 Current working directory: {os.getcwd()}")
+            
             if not source:
                 return jsonify({"error": "No source given"}), 400
 
