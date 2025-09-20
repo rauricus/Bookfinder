@@ -57,8 +57,11 @@ The `setup_raspberrypi.sh` script automatically:
 ### Software Installation
 - ✅ **Installs essential system dependencies** (build tools, git, wget)
 - ✅ **Downloads and configures Micromamba** for package management
-- ✅ **Creates Python environment** with all required packages (Python, OpenCV, Tesseract, etc.)
-- ✅ **Installs OCR language packs** via conda environment
+- ✅ **Runs existing project setup script** (`1_create-conda-env.sh`) which handles:
+  - Python environment creation with all required packages
+  - EAST text detection model download
+  - SymSpell dictionaries download
+  - Directory structure setup
 
 ### Performance Optimization
 - ✅ **Configures memory split** for optimal performance

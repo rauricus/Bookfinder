@@ -214,22 +214,24 @@ install_micromamba() {
 # =============================================================================
 
 setup_conda_environment() {
-    log_info "Setting up Python environment..."
+    log_info "Setting up Python environment using existing project script..."
     
     # Source micromamba
     export PATH="$HOME/.local/bin:$PATH"
     eval "$(micromamba shell hook --shell bash)"
     
-    # Check if environment exists
-    if micromamba env list | grep -q "$CONDA_ENV_NAME"; then
-        log_warning "Environment '$CONDA_ENV_NAME' already exists. Updating..."
-        micromamba env update -n "$CONDA_ENV_NAME" -f "${PROJECT_ROOT}/yolo11.condaenv.yml"
-    else
-        log_info "Creating new environment '$CONDA_ENV_NAME'..."
-        micromamba env create -f "${PROJECT_ROOT}/yolo11.condaenv.yml"
-    fi
+    # Use the existing project setup script which handles everything
+    cd "$PROJECT_ROOT"
     
-    log_success "Python environment '$CONDA_ENV_NAME' configured"
+    if [ -f "1_create-conda-env.sh" ]; then
+        log_info "Running existing conda environment setup script..."
+        bash "1_create-conda-env.sh"
+        log_success "Python environment '$CONDA_ENV_NAME' configured via project script"
+    else
+        log_error "Project setup script '1_create-conda-env.sh' not found!"
+        log_error "Please ensure you're in the correct project directory"
+        exit 1
+    fi
 }
 
 # =============================================================================
@@ -259,46 +261,6 @@ optimize_performance() {
     # fi
     
     log_success "Performance optimizations applied"
-}
-
-# =============================================================================
-# Project-specific Setup
-# =============================================================================
-
-setup_project_directories() {
-    log_info "Setting up project directories..."
-    
-    cd "$PROJECT_ROOT"
-    
-    # Create necessary directories
-    mkdir -p models
-    mkdir -p dictionaries
-    mkdir -p output
-    mkdir -p datasets
-    
-    # Set appropriate permissions
-    chmod +x *.sh 2>/dev/null || true
-    
-    log_success "Project directories configured"
-}
-
-download_models() {
-    log_info "Checking for required models..."
-    
-    # This function can be extended to download models if they're not present
-    local model_dir="${PROJECT_ROOT}/models"
-    
-    if [ ! -f "$model_dir/east_text_detection.pb" ]; then
-        log_warning "EAST text detection model not found"
-        log_info "Please ensure models are available in the models/ directory"
-    fi
-    
-    if [ ! -f "$model_dir/detect-book-spines.pt" ]; then
-        log_warning "YOLO book spine detection model not found"
-        log_info "Please ensure models are available in the models/ directory"
-    fi
-    
-    log_info "Model check completed"
 }
 
 # =============================================================================
@@ -358,10 +320,8 @@ main() {
     install_micromamba
     setup_conda_environment
     
-    # Performance and project setup
+    # Performance and service setup
     optimize_performance
-    setup_project_directories
-    download_models
     
     # Optional service
     read -p "Do you want to create a systemd service for auto-start? (y/N): " -n 1 -r
