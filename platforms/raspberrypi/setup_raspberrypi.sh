@@ -342,7 +342,7 @@ main() {
     echo "  3. Navigate to project: cd ${PROJECT_ROOT}"
     echo "  4. Run the application: python app.py"
     echo
-    log_info "For web interface, the app will be available at: http://$(hostname -I | awk '{print $1}'):5000"
+    log_info "For web interface, the app will be available at: http://$(hostname -I | awk '{print $1}'):5010"
     echo
     
     # Check if reboot is needed
