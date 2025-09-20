@@ -168,7 +168,7 @@ install_system_dependencies() {
         "pkg-config"       # Package configuration tool
     )
     
-    log_info "Installing minimal system packages (most dependencies via conda)..."
+    log_info "Installing minimal system packages..."
     
     for package in "${packages[@]}"; do
         log_info "Installing ${package}..."
@@ -176,7 +176,6 @@ install_system_dependencies() {
     done
     
     log_success "Essential system dependencies installed"
-    log_info "Note: Python, OpenCV, Tesseract, and other ML libraries will be installed via conda"
 }
 
 # =============================================================================

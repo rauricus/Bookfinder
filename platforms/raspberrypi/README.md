@@ -59,6 +59,7 @@ The `setup_raspberrypi.sh` script automatically:
 - ✅ **Downloads and configures Micromamba** for package management
 - ✅ **Runs existing project setup script** (`1_create-conda-env.sh`) which handles:
   - Python environment creation with all required packages
+  - Tesseract OCR with all language packs (German, English, French, Italian)
   - EAST text detection model download
   - SymSpell dictionaries download
   - Directory structure setup
