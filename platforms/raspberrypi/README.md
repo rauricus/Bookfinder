@@ -31,6 +31,10 @@ The following recommendations are based on similar AI/ML projects and general be
 
 Actual disk space requirements will depend on which models and features are used.
 
+## Background
+- Deploying YOLO on a RaspberryPi: https://docs.ultralytics.com/de/guides/raspberry-pi/#install-ultralytics-package
+- Using the AI Camera: https://www.raspberrypi.com/documentation/accessories/ai-camera.html
+
 ## Quick Setup
 
 1. **Flash Raspberry Pi OS** to your microSD card using Raspberry Pi Imager
