@@ -3,19 +3,19 @@ channels:
   - conda-forge
   - pytorch
 dependencies:
-  - python # Yolo11 used to only support 3.9-3.11
+  - python
   - pip
 
   - python-dotenv
 
-  - pytorch # ::pytorch=2.3 # 2.3 needed at one time to avoid a bug during instance segmentation training (see https://github.com/ultralytics/ultralytics/issues/17168)
-  - torchvision
+  - pytorch
+  - torchvision==0.22 # warning: torchvision==0.23 is incompatible with torch==2.7
   - torchaudio
 
   - pandas
   - matplotlib
   - numpy<2.0.0
-  - opencv #<4.10.0: Resolves a dependancy issue with protobuf (as of 31.12.2024 - fixed now)
+  - opencv
  # - ninja  Needed for easyocr
 
   - ultralytics 8.3.*
