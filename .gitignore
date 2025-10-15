@@ -6,6 +6,7 @@ datasets/backups
 datasets/LibVision
 datasets/Book_spine_2
 datasets/Bookspine_text_blocks
+datasets/Book-spine-detection.v1-fit-within-320x320.yolov11
 runs
 output
 
