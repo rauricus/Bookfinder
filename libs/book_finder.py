@@ -65,7 +65,7 @@ class BookFinder:
         # model = YOLO("yolo11s-seg.pt")  # load an official model (instance segmentation)
         # model = YOLO(config.HOME_DIR+"/runs/obb/train/weights/best.pt")  # load my custom model (Oriented Bounding Boxes Object Detection)
         # model = YOLO(config.HOME_DIR+"/runs/segment/train/weights/best.pt")  # load my custom model
-        model = YOLO(os.path.join(config.MODEL_DIR, "YOLO11-obb-n/detect-book-spines.train2.pt"))
+        model = YOLO(config.BOOK_SPINE['model_path'])  # load model based on current platform config
         
         # Log the model's class names
         logger.debug(f"Model classes: {model.names}")
@@ -93,8 +93,7 @@ class BookFinder:
 
         # Load the pre-trained EAST model
         logger.debug("Loading EAST text detector...")
-        east_model_path = os.path.join(config.MODEL_DIR, "east_text_detection.pb")
-        east_model = cv2.dnn.readNet(east_model_path)
+        east_model = cv2.dnn.readNet(config.OCR['model_path'])
 
         books_detected = 0
         with open(os.path.join(self.output_dir, "results.json"), "w") as text_file:

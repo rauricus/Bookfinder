@@ -50,7 +50,7 @@ for img_path in test_images:
             ("Default (English only)", None, "--psm 6"),
             ("German only", "deu", "--psm 6"),
             ("German + English", "deu+eng", "--psm 6"),
-            (f"Config settings ({config.OCR_LANGUAGES})", config.OCR_LANGUAGES, f"--psm {config.OCR_PSM_MODE}")
+            (f"Config settings ({config.OCR['languages']})", config.OCR['languages'], f"--psm {config.OCR['psm_mode']}")
         ]
         
         # Run tests for each configuration

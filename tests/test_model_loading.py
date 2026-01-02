@@ -94,7 +94,7 @@ def test_inference_sizes():
     print("=" * 60)
     
     # Test with a dummy image
-    for platform in config.PLATFORM_CONFIGS.keys():
+    for platform in config._PLATFORM_CONFIGS.keys():
         cfg = config.get_config(platform)
         inference_size = cfg['inference_size']
         
@@ -121,7 +121,7 @@ def main():
     parser = argparse.ArgumentParser(description='Test model loading and platform configurations')
     parser.add_argument(
         '--platform', '-p',
-        choices=list(config.PLATFORM_CONFIGS.keys()) + ['all'],
+        choices=list(config._PLATFORM_CONFIGS.keys()) + ['all'],
         default='all',
         help='Platform to test (default: all)'
     )
@@ -137,7 +137,7 @@ def main():
     print("=" * 60)
     
     if args.platform == 'all':
-        platforms = list(config.PLATFORM_CONFIGS.keys())
+        platforms = list(config._PLATFORM_CONFIGS.keys())
     else:
         platforms = [args.platform]
     

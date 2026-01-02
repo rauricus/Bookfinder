@@ -7,7 +7,7 @@ CONDA_ENV_FILE='yolo11.condaenv.yml'
 CONDA_ENV="yolo11"
 
 MODEL_DIR="models"
-MODEL_NAME="east_text_detection.pb"
+MODEL_NAME="EAST/east_text_detection.pb"
 
 DICT_DIR="dictionaries"
 

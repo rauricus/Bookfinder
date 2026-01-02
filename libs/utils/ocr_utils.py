@@ -26,7 +26,7 @@ def ocr_onImage(image, east_model, debug=0, languages=None):
         image_path (str): Path to the image for OCR.
         east_model (cv2.dnn_Net): The pre-trained EAST model
         debug (int): Debug level for visualization
-        languages (str, optional): Language string for Tesseract. If None, uses config.OCR_LANGUAGES.
+        languages (str, optional): Language string for Tesseract. If None, uses config.OCR['languages'].
 
     Returns:
         dict: OCR results for each detected text region, sorted by position (top-to-bottom, left-to-right)
@@ -73,11 +73,11 @@ def ocr_onImage(image, east_model, debug=0, languages=None):
 
             # Perform OCR on the corrected region with language support
             # Use config settings if languages parameter is None
-            lang_to_use = languages if languages is not None else config.OCR_LANGUAGES
+            lang_to_use = languages if languages is not None else config.OCR['languages']
             ocr_text = pytesseract.image_to_string(
                 processed_image,
                 lang=lang_to_use,
-                config=f"--psm {config.OCR_PSM_MODE}"
+                config=f"--psm {config.OCR['psm_mode']}"
             )
 
             # Store OCR result with column and row index
