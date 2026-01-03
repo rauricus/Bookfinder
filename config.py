@@ -139,9 +139,7 @@ _PLATFORM_CONFIGS: Dict[str, Dict[str, Any]] = {
             # 'postprocessing': {
             #     'nms_threshold': 0.5,  # Slightly more conservative
             #     'confidence_threshold': 0.3
-            # },
-            # 'crop_from_original': True,    # Extract book spines from original resolution
-            # 'original_processing': True  # Keep original image for cropping
+            # }
         },
         'ocr': {
             'model_file': 'EAST/east_text_detection.pb',
