@@ -140,9 +140,19 @@ class DatabaseManager:
                 end_time DATETIME,
                 books_detected INTEGER DEFAULT 0,
                 output_dir TEXT,
-                input_file TEXT
+                input_file TEXT,
+                config_json TEXT,
+                model_file TEXT
             )
         """)
+        
+        # Migration: Add config_json and model_file columns if they don't exist
+        cursor.execute("PRAGMA table_info(runs)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if 'config_json' not in columns:
+            cursor.execute("ALTER TABLE runs ADD COLUMN config_json TEXT")
+        if 'model_file' not in columns:
+            cursor.execute("ALTER TABLE runs ADD COLUMN model_file TEXT")
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS bookspines (
@@ -187,22 +197,22 @@ class DatabaseManager:
         conn.commit()
         conn.close()
 
-    def create_run(self, start_time, input_file=None, output_dir=None):
+    def create_run(self, start_time, input_file=None, output_dir=None, config_json=None, model_file=None):
         conn = self._connect()
         cursor = conn.cursor()
         cursor.execute(
             """
-            INSERT INTO runs (start_time, input_file, output_dir)
-            VALUES (?, ?, ?)
+            INSERT INTO runs (start_time, input_file, output_dir, config_json, model_file)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (start_time, input_file, output_dir),
+            (start_time, input_file, output_dir, config_json, model_file),
         )
         run_id = cursor.lastrowid
         conn.commit()
         conn.close()
         return RunContext(self.db_path, run_id)
 
-    def log_run_start(self, start_time, input_file=None, output_dir=None):
+    def log_run_start(self, start_time, input_file=None, output_dir=None, config_json=None, model_file=None):
         """
         Log the start of a run into the database and return the run ID.
         
@@ -210,13 +220,15 @@ class DatabaseManager:
             start_time: ISO format datetime string
             input_file: Relative path to the input file
             output_dir: Relative path to the output directory
+            config_json: JSON string of the configuration used for this run
+            model_file: Name of the model file used for detection
         """
         conn = self._connect()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO runs (start_time, input_file, output_dir)
-            VALUES (?, ?, ?)
-        """, (start_time, input_file, output_dir))
+            INSERT INTO runs (start_time, input_file, output_dir, config_json, model_file)
+            VALUES (?, ?, ?, ?, ?)
+        """, (start_time, input_file, output_dir, config_json, model_file))
         run_id = cursor.lastrowid
         conn.commit()
         conn.close()
@@ -344,7 +356,7 @@ class DatabaseManager:
         conn = self._connect()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, start_time, end_time, books_detected, output_dir, input_file
+            SELECT id, start_time, end_time, books_detected, output_dir, input_file, model_file, config_json
             FROM runs
             ORDER BY start_time DESC
         """)
@@ -357,7 +369,9 @@ class DatabaseManager:
             'end_time': row[2],
             'books_detected': row[3],
             'output_dir': row[4],
-            'input_file': row[5]
+            'input_file': row[5],
+            'model_file': row[6],
+            'config_json': row[7]
         } for row in runs]
         
     def get_run_details(self, run_id):
@@ -365,7 +379,7 @@ class DatabaseManager:
         conn = self._connect()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, start_time, end_time, books_detected, output_dir, input_file
+            SELECT id, start_time, end_time, books_detected, output_dir, input_file, model_file, config_json
             FROM runs
             WHERE id = ?
         """, (run_id,))
@@ -382,5 +396,7 @@ class DatabaseManager:
             'end_time': row[2],
             'books_detected': row[3],
             'output_dir': row[4],
-            'input_file': row[5]
+            'input_file': row[5],
+            'model_file': row[6],
+            'config_json': row[7]
         }

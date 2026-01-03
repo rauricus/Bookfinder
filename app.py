@@ -5,6 +5,7 @@ import threading
 import eventlet
 import sqlite3
 import signal
+import json
 from datetime import datetime
 
 # Apply eventlet monkey-patching.
@@ -81,9 +82,16 @@ class BooksOnShelvesApp(Flask):
             try:
                 output_dir = self.__get_next_output_directory()
                 
-                # Create run context with output directory
+                # Get current configuration and serialize it
+                current_config = config.get_config()
+                config_json = json.dumps(current_config, indent=2)
+                model_file = current_config.get('book_spine_detection', {}).get('model_file')
+                
+                # Create run context with output directory and configuration
                 run_context = self.db_manager.create_run(
                     start_time=datetime.now().isoformat(),
+                    config_json=config_json,
+                    model_file=model_file,
                 )
                 
                 # Start a new run with the run manager
