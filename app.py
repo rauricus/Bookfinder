@@ -70,7 +70,7 @@ class BooksOnShelvesApp(Flask):
         # POST request means we're starting a new run
         if request.method == 'POST':
             # Get parameters from the request
-            source = request.form.get("source")
+            source = request.form.get("source", "").strip()
             debug = request.form.get("debug", "0")
             
             # Debug logging to see what we actually received
