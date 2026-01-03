@@ -56,7 +56,8 @@ python3 tests/test_lookup_utils.py
 ## 🎯 Status
 ## What works
 ### Detect book spines
-* Book spines in a photo are recognized using a re-trained YOLO11 OBB model.
+* Book spines in a photo are recognized using a re-trained YOLO11 OBB model ("s" small size).
+  * A new YOLO11 OBB model of "n" nano size, retrained using more epochs, is currently tested as are ONNX variants. The goal is to get a model to work on a Raspberry PI or even on its AI camera.
 * Book spine images are extracted by rotating them until they are higher than wide and rectangular, then cropped from the photo.
 * A 180-degree rotated image variant is created to account for texts being upside-down.
 ### Detect text areas
@@ -89,32 +90,6 @@ python3 tests/test_lookup_utils.py
      * This preserves text quality while drastically reducing memory requirements
   3. **Model Optimization**: Exploring quantization of the YOLO and EAST models to reduce memory footprint
   4. **Memory Cleanup**: Ensuring each pipeline stage releases resources before proceeding to the next
-* The segmentation fault issue (see below) is being addressed through these optimizations:
-
-```
-2025-08-24 22:16:40,550 - INFO - 📘 Bookfinder Server started and listening for requests on http://0.0.0.0:5010
-192.168.178.172 - - [24/Aug/2025 22:18:08] code 400, message Bad request version ('Qª\\x00"\\x13\\x01\\x13\\x03\\x13\\x02À+À/Ì©Ì¨À,À0À')
-192.168.178.172 - - [24/Aug/2025 22:18:08] "\x16\x03\x01\x07h\x01\x00\x07d\x03\x03Ê×À· Ï¹Í­(ï5\x14³\x82¦ÎóðrÚ\x85Ú+dï aî\x08±Y $û»r\x92a\x1aç\x94¼«àô§)Ï\x9d\x90\x80òÌQ+Vº©Iª\x98 Qª\x00"\x13\x01\x13\x03\x13\x02À+À/Ì©Ì¨À,À0À" 400 -
-192.168.178.172 - - [24/Aug/2025 22:18:08] code 400, message Bad request syntax ('\\x16\\x03\\x01\\x02\\x97\\x01\\x00\\x02\\x93\\x03\\x03\\x96@«Îîæ')
-192.168.178.172 - - [24/Aug/2025 22:18:08] "\x16\x03\x01\x02\x97\x01\x00\x02\x93\x03\x03\x96@«Îîæ" 400 -
-2025-08-24 22:20:54,478 - INFO - ✅ Loaded 80000 words for 'en'
-2025-08-24 22:20:54,887 - INFO - ✅ Loaded 100000 words for 'de'
-2025-08-24 22:20:54,888 - INFO - ✅ Loaded 100000 words for 'fr'
-2025-08-24 22:20:54,889 - INFO - ✅ Loaded 100000 words for 'it'
-2025-08-24 22:20:54,911 - ERROR - Dictionary file not found at /home/pi/Bookfinder/dictionaries/names.de.txt.
-2025-08-24 22:20:54,914 - ERROR - ❌ Failed to load dictionary: /home/pi/Bookfinder/dictionaries/names.de.txt
-2025-08-24 22:20:54,928 - ERROR - ❌ Failed to load name dictionary for 'de'
-2025-08-24 22:20:54,943 - ERROR - Dictionary file not found at /home/pi/Bookfinder/dictionaries/book_titles.de.txt.
-2025-08-24 22:20:54,944 - ERROR - ❌ Failed to load dictionary: /home/pi/Bookfinder/dictionaries/book_titles.de.txt
-2025-08-24 22:20:54,944 - ERROR - ❌ Failed to load book title dictionary for 'de'
-2025-08-24 22:20:54,952 - INFO - 🔍 Starting book detection...
-2025-08-24 22:20:54,971 - INFO - === Book detection starts at 24.08.2025 22:20 ===
-
-image 1/1 /home/pi/Bookfinder/example-files/books/Books_00003.png: 480x640 None6063.4ms
-Speed: 172.2ms preprocess, 6063.4ms inference, 133.5ms postprocess per image at shape (1, 3, 480, 640)
-Segmentation fault
-```
-
 * After these optimizations, I'll explore running the book spine detection model on the IMX500 AI processor of the camera.
 
 
