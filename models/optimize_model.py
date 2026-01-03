@@ -3,7 +3,7 @@
 Script to optimize YOLO model for different platform deployments.
 Supports ONNX export with platform-specific optimizations for Raspberry Pi and other devices.
 
-Usage: python3 models/quantize_model.py [options]
+Usage: python3 models/optimize_model.py [options]
 Run from project root directory.
 """
 
