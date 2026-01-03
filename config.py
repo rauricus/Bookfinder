@@ -2,7 +2,13 @@ import logging
 import os
 import platform
 import sys
+from dotenv import load_dotenv
+
 from typing import Dict, Any
+
+# Load environment variables from .env file
+#   System environment takes precedence; use override=true to force .env values.
+load_dotenv()
 
 __all__ = [
     'HOME_DIR',
@@ -64,6 +70,33 @@ _PLATFORM_CONFIGS: Dict[str, Dict[str, Any]] = {
     'generic': {
         'book_spine_detection': {
             'model_file': 'YOLO11-obb-s/detect-book-spines.pt',
+            'model_format': 'pytorch',
+            'inference_size': (640, 640),
+            # 'device': 'cpu',
+            # 'batch_size': 2,
+            # 'num_threads': 0,
+            # 'memory_limit_mb': 1024,
+            # 'use_gpu': False,
+            # 'optimization_level': 'balanced',
+            # 'preprocessing': {
+            #     'resize_method': 'bilinear',
+            #     'normalize': True
+            # },
+            # 'postprocessing': {
+            #     'nms_threshold': 0.45,
+            #     'confidence_threshold': 0.25
+            # }
+        },
+        'ocr': {
+            'model_file': 'EAST/east_text_detection.pb',
+            'languages': 'deu+eng',  # German + English covers most cases
+            'psm_mode': 6  # Uniform block of text (good for book spines)
+        }
+    },
+    
+    'generic-nano-model': {
+        'book_spine_detection': {
+            'model_file': 'YOLO11-obb-n/train2/weights/best.pt',
             'model_format': 'pytorch',
             'inference_size': (640, 640),
             # 'device': 'cpu',
