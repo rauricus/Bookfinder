@@ -98,7 +98,7 @@ _PLATFORM_CONFIGS: Dict[str, Dict[str, Any]] = {
         'book_spine_detection': {
             'model_file': 'YOLO11-obb-n/train2/weights/best.pt',
             'model_format': 'pytorch',
-            'inference_size': (640, 640),
+            'inference_size': (320, 320),  # Matches training size
             # 'device': 'cpu',
             # 'batch_size': 2,
             # 'num_threads': 0,
@@ -123,7 +123,7 @@ _PLATFORM_CONFIGS: Dict[str, Dict[str, Any]] = {
     
     'rpi-3b-plus': {
         'book_spine_detection': {
-            'model_file': 'detect-book-spines_rpi-3b-plus_optimized.onnx',
+            'model_file': 'YOLO11-obb-s/detect-book-spines_rpi-3b-plus_optimized.onnx',
             'model_format': 'onnx',
             'inference_size': (320, 320),  # Smaller input for performance
             # 'device': 'cpu',

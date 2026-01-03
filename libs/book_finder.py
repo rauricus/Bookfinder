@@ -66,14 +66,32 @@ class BookFinder:
         # model = YOLO(config.HOME_DIR+"/runs/obb/train/weights/best.pt")  # load my custom model (Oriented Bounding Boxes Object Detection)
         # model = YOLO(config.HOME_DIR+"/runs/segment/train/weights/best.pt")  # load my custom model
         model = YOLO(config.BOOK_SPINE['model_path'])  # load model based on current platform config
-        
+                
         # Log the model's class names
         logger.debug(f"Model classes: {model.names}")
+
+        # Check if training size matches configured inference size
+        configured_size = config.BOOK_SPINE['inference_size']
+        if hasattr(model, 'overrides') and 'imgsz' in model.overrides:
+            training_size = model.overrides['imgsz']
+            # Convert to tuple if needed
+            if isinstance(training_size, int):
+                training_size = (training_size, training_size)
+            elif isinstance(training_size, list):
+                training_size = tuple(training_size)
+            
+            if training_size != configured_size:
+                logger.warning(
+                    f"⚠️  Model training size {training_size} does not match "
+                    f"configured inference size {configured_size}. "
+                    f"This may affect accuracy and performance."
+                )
 
         # Predict with the model and save visualization
         results = model.predict(
             source, 
             conf=0.5,
+            imgsz=config.BOOK_SPINE['inference_size'],
             save=True,
             project=self.output_dir,
             name='',
