@@ -96,19 +96,26 @@ class BookFinder:
         east_model = cv2.dnn.readNet(config.OCR['model_path'])
 
         books_detected = 0
-        with open(os.path.join(self.output_dir, "results.json"), "w") as text_file:
+        
+        # Open results file to store detection results
+        results_file = open(os.path.join(self.output_dir, "results.json"), "w")
+        
+        # Process results
+        for result in results:
 
-            # Process results
-            for result in results:
+            if len(result) > 0:
+                logger.debug(result.to_json())
+                # Write detection results to file
+                results_file.write(result.to_json() + "\n")
+                
+                for idx, obb in enumerate(result.obb.xyxyxyxy):
 
-                if len(result) > 0:
-                    logger.debug(result.to_json())
-                    for idx, (obb, cls) in enumerate(zip(result.obb.xyxyxyxy, result.obb.cls)):
+                        # Get the class ID for this detection
+                        class_id = int(result.obb.cls[idx])
+                        class_name = result.names[class_id]
 
                         # Check if the detection is of the "book" class
-                        class_id = int(cls)
-                        class_name = result.names[class_id]
-                        if "book" in class_name:
+                        if "book" in class_name.lower():
                             books_detected += 1
 
                             logger.info(f"Book {idx} found")
@@ -227,6 +234,9 @@ class BookFinder:
 
                         else:
                             logger.info(f"Skipping {class_name}...")
+
+        # Close results file
+        results_file.close()
 
         # Record the end time of the run
         end_time = datetime.now()
