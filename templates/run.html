@@ -153,15 +153,21 @@
     <div class="status" id="run-status"></div>
     <div>
         <div class="tab active" id="bookspines-tab">Book Spines</div>
+        <div class="tab" id="overview-tab">Overview</div>
         <div class="tab" id="log-tab">Log</div>
     </div>
-    <div class="tab-content" id="log-content">
-        <pre id="log-container">{{ log_content }}</pre>
-        <div id="log-placeholder" class="placeholder">Waiting for new logs...</div>
+    <div class="tab-content" id="overview-content">
+        <div id="overview-image-container" style="text-align: center; padding: 20px;">
+            <div id="overview-placeholder" class="placeholder">Loading overview image...</div>
+        </div>
     </div>
     <div class="tab-content active" id="bookspines-content">
         <div id="bookspines-list"></div>
         <div id="bookspines-placeholder" class="placeholder">No book spines found yet...</div>
+    </div>
+    <div class="tab-content" id="log-content">
+        <pre id="log-container">{{ log_content }}</pre>
+        <div id="log-placeholder" class="placeholder">Waiting for new logs...</div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
@@ -180,24 +186,23 @@
         const runStatus = document.getElementById('run-status');
         
         // Tab switching logic
+        const overviewTab = document.getElementById('overview-tab');
         const logTab = document.getElementById('log-tab');
         const bookspinesTab = document.getElementById('bookspines-tab');
+        const overviewContent = document.getElementById('overview-content');
         const logContent = document.getElementById('log-content');
         const bookspinesContent = document.getElementById('bookspines-content');
 
-        logTab.addEventListener('click', () => {
-            logTab.classList.add('active');
-            bookspinesTab.classList.remove('active');
-            logContent.classList.add('active');
-            bookspinesContent.classList.remove('active');
-        });
+        function switchToTab(targetTab, targetContent) {
+            [overviewTab, logTab, bookspinesTab].forEach(tab => tab.classList.remove('active'));
+            [overviewContent, logContent, bookspinesContent].forEach(content => content.classList.remove('active'));
+            targetTab.classList.add('active');
+            targetContent.classList.add('active');
+        }
 
-        bookspinesTab.addEventListener('click', () => {
-            bookspinesTab.classList.add('active');
-            logTab.classList.remove('active');
-            bookspinesContent.classList.add('active');
-            logContent.classList.remove('active');
-        });
+        overviewTab.addEventListener('click', () => switchToTab(overviewTab, overviewContent));
+        logTab.addEventListener('click', () => switchToTab(logTab, logContent));
+        bookspinesTab.addEventListener('click', () => switchToTab(bookspinesTab, bookspinesContent));
 
         // Function to add book lookup information to the details section
         function addBookLookup(bookspineId, lookup) {
@@ -366,10 +371,40 @@
             }
         }
 
+        // Function to load overview image
+        async function loadOverviewImage() {
+            const overviewContainer = document.getElementById('overview-image-container');
+            const overviewPlaceholder = document.getElementById('overview-placeholder');
+            
+            // Try to find the YOLO output image
+            // YOLO saves images with the same name as the input in the prediction directory
+            const imageUrl = `/runs/${runId}/overview`;
+            
+            const img = new Image();
+            
+            img.onload = function() {
+                overviewPlaceholder.style.display = 'none';
+                img.style.maxWidth = '100%';
+                img.style.height = 'auto';
+                img.style.border = '1px solid #ddd';
+                img.style.borderRadius = '4px';
+                overviewContainer.appendChild(img);
+            };
+            
+            img.onerror = function() {
+                overviewPlaceholder.textContent = 'Overview image not available';
+                overviewPlaceholder.style.color = '#666';
+            };
+            
+            img.src = imageUrl;
+            img.alt = 'Detection Overview';
+        }
+
         // Initialize based on view mode
         if (viewMode) {
             // In view mode, load bookspines from the server
             loadBookspinesForRun();
+            loadOverviewImage();
             
             // Set status to completed
             runStatus.textContent = 'Status: Completed (Previous execution)';

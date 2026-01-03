@@ -70,8 +70,17 @@ class BookFinder:
         # Log the model's class names
         logger.debug(f"Model classes: {model.names}")
 
-        # Predict with the model
-        results = model.predict(source, conf=0.5)
+        # Predict with the model and save visualization
+        results = model.predict(
+            source, 
+            conf=0.5,
+            save=True,
+            project=self.output_dir,
+            name='',
+            exist_ok=True,
+            show_labels=True,
+            show_conf=True
+        )
 
         # --- Process and store book spine images ---
 

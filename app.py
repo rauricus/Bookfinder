@@ -47,6 +47,7 @@ class BooksOnShelvesApp(Flask):
         self.route("/run", methods=['GET', 'POST'])(self.run_page)
         self.route("/runs")(self.get_runs)
         self.route("/runs/<run_id>/bookspines")(self.get_bookspines)
+        self.route("/runs/<run_id>/overview")(self.get_overview_image)
         self.route("/image/<run_id>")(self.serve_image)
         self.route("/log/<run_id>")(self.get_log_content)
 
@@ -271,6 +272,62 @@ class BooksOnShelvesApp(Flask):
             
         except Exception as e:
             logger.error(f"Error serving image: {str(e)}")
+            return jsonify({"error": str(e)}), 500
+
+    def get_overview_image(self, run_id):
+        """Serves the YOLO detection overview image for a specific run."""
+        try:
+            # Get run details from database
+            run_details = self.db_manager.get_run_details(run_id)
+            if not run_details:
+                return jsonify({"error": f"Run ID {run_id} not found"}), 404
+                
+            # Check if output directory exists
+            if not run_details['output_dir']:
+                return jsonify({"error": "No output directory found for this run"}), 404
+                
+            # Handle relative paths
+            output_dir = run_details['output_dir']
+            if not os.path.isabs(output_dir):
+                output_dir = os.path.join(config.HOME_DIR, output_dir)
+            
+            # YOLO saves the annotated image in the output directory or a subdirectory
+            import glob
+            overview_path = None
+            
+            # Search patterns - YOLO typically saves in root or predict subdirectory
+            search_dirs = [
+                output_dir,  # Root directory
+                os.path.join(output_dir, 'predict'),  # Common YOLO subdirectory
+                os.path.join(output_dir, 'exp'),  # Alternative YOLO subdirectory
+            ]
+            
+            # Search for images in these directories
+            for search_dir in search_dirs:
+                if not os.path.exists(search_dir):
+                    continue
+                    
+                for pattern in ['*.jpg', '*.jpeg', '*.png']:
+                    matches = glob.glob(os.path.join(search_dir, pattern))
+                    # Filter out book spine images (they're in 'book' subdirectory)
+                    matches = [m for m in matches if '/book/' not in m and '\\book\\' not in m]
+                    if matches:
+                        # Take the first match (usually there's only one)
+                        overview_path = matches[0]
+                        logger.info(f"Found overview image: {overview_path}")
+                        break
+                if overview_path:
+                    break
+            
+            if not overview_path or not os.path.isfile(overview_path):
+                logger.warning(f"Overview image not found in {output_dir} or subdirectories")
+                return jsonify({"error": "Overview image not found"}), 404
+            
+            # Serve the file
+            return send_file(overview_path, mimetype='image/jpeg')
+            
+        except Exception as e:
+            logger.error(f"Error serving overview image: {str(e)}")
             return jsonify({"error": str(e)}), 500
 
 
