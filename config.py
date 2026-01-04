@@ -96,7 +96,7 @@ _PLATFORM_CONFIGS: Dict[str, Dict[str, Any]] = {
     
     'generic-nano-model': {
         'book_spine_detection': {
-            'model_file': 'YOLO11-obb-n/train2/weights/best.pt',
+            'model_file': 'YOLO11-obb-n/train3/weights/best.pt',
             'model_format': 'pytorch',
             'inference_size': (320, 320),  # Matches training size
             # 'device': 'cpu',
