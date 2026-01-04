@@ -107,7 +107,7 @@ class BookFinder:
                         if "book" in result.names.values():
                             books_detected += 1
 
-                            logger.info(f"Book {idx} found")
+                            logger.info(f"Book {idx} found (class: {class_name})")
 
                             # --- Extract and pre-process the detected book spine images ---
 
