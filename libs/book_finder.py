@@ -65,7 +65,7 @@ class BookFinder:
         # model = YOLO("yolo11s-seg.pt")  # load an official model (instance segmentation)
         # model = YOLO(config.HOME_DIR+"/runs/obb/train/weights/best.pt")  # load my custom model (Oriented Bounding Boxes Object Detection)
         # model = YOLO(config.HOME_DIR+"/runs/segment/train/weights/best.pt")  # load my custom model
-        model = YOLO(os.path.join(config.MODEL_DIR, "detect-book-spines.pt"))
+        model = YOLO(os.path.join(config.MODEL_DIR, "YOLO11-obb-s/detect-book-spines.pt"))
 
         # Predict with the model
         results = model.predict(source, conf=0.5)
