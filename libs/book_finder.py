@@ -65,7 +65,10 @@ class BookFinder:
         # model = YOLO("yolo11s-seg.pt")  # load an official model (instance segmentation)
         # model = YOLO(config.HOME_DIR+"/runs/obb/train/weights/best.pt")  # load my custom model (Oriented Bounding Boxes Object Detection)
         # model = YOLO(config.HOME_DIR+"/runs/segment/train/weights/best.pt")  # load my custom model
-        model = YOLO(os.path.join(config.MODEL_DIR, "YOLO11-obb-s/detect-book-spines.pt"))
+        model = YOLO(os.path.join(config.MODEL_DIR, "YOLO11-obb-n/detect-book-spines.train2.pt"))
+        
+        # Log the model's class names
+        logger.debug(f"Model classes: {model.names}")
 
         # Predict with the model
         results = model.predict(source, conf=0.5)
@@ -101,10 +104,12 @@ class BookFinder:
 
                 if len(result) > 0:
                     logger.debug(result.to_json())
-                    for idx, obb in enumerate(result.obb.xyxyxyxy):
+                    for idx, (obb, cls) in enumerate(zip(result.obb.xyxyxyxy, result.obb.cls)):
 
                         # Check if the detection is of the "book" class
-                        if "book" in result.names.values():
+                        class_id = int(cls)
+                        class_name = result.names[class_id]
+                        if "book" in class_name:
                             books_detected += 1
 
                             logger.info(f"Book {idx} found")
@@ -222,7 +227,7 @@ class BookFinder:
                                     self.on_detection(bookspine_data)
 
                         else:
-                            logger.info("Skipping ", result.names[idx], '...')
+                            logger.info(f"Skipping {class_name}...")
 
         # Record the end time of the run
         end_time = datetime.now()
