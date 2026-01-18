@@ -18,7 +18,7 @@ dependencies:
   - opencv #<4.10.0: Resolves a dependancy issue with protobuf (as of 31.12.2024 - fixed now)
  # - ninja  Needed for easyocr
 
-  - ultralytics
+  - ultralytics 8.3.*
 
 # - easyocr   I'm installing this via pip, as else I get a dependancy issue with ninja.
   - tesseract
