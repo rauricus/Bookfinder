@@ -92,6 +92,13 @@ python3 tests/test_lookup_utils.py
   4. **Memory Cleanup**: Ensuring each pipeline stage releases resources before proceeding to the next
 * After these optimizations, I'll explore running the book spine detection model on the IMX500 AI processor of the camera.
 
+The new OBB-n model is not as good, but only 5+MB (OBB-s is 20+MB), it uses only 320x320 interference size, but has been trained with 100 epocs.
+It misses some books, for a few it is better, so it's kind of good enough to attempt to proof the point that we could run it on an edge device.
+Possible next steps:
+  * Verify if it runs on a Raspi (the 20MB model didn't)
+  * Verify if it can be optimized and shrinked to ONNX so that it might fit on the AI camera.
+  * Switch to YOLO26 to see if that makes a difference (has been optimized to run on CPU of edge devices; has no NMS layer; uses less memory, has better performance.)
+
 
 ## What is not there yet
 -
