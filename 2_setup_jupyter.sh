@@ -3,8 +3,8 @@
 # Requires: micromamba
 
 
-CONDA_ENV_FILE='yolo11.condaenv.yml'
-CONDA_ENV="yolo11"
+CONDA_ENV_FILE='bookfinder.condaenv.yml'
+CONDA_ENV="bookfinder"
 
 KERNEL_DISPLAY_NAME="Python 3 ($CONDA_ENV)"
 

@@ -32,7 +32,7 @@ Install Mamba for managing all dependencies.
 ./1_create-conda-env.sh
 
 # Activate environment
-mamba activate yolo11
+mamba activate bookfinder
 
 # Run the Bookfinder server
 python3 app.py

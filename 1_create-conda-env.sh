@@ -3,8 +3,8 @@
 # Requires: micromamba
 
 
-CONDA_ENV_FILE='yolo11.condaenv.yml'
-CONDA_ENV="yolo11"
+CONDA_ENV_FILE='bookfinder.condaenv.yml'
+CONDA_ENV="bookfinder"
 
 MODEL_DIR="models"
 MODEL_NAME="east_text_detection.pb"

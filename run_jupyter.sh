@@ -3,8 +3,8 @@
 # Requires: micromamba
 
 
-CONDA_ENV="yolo11"
-NOTEBOOK_DIR="$HOME/Documents/Projekte/Objekterkennung.$CONDA_ENV/notebooks"
+CONDA_ENV="bookfinder"
+NOTEBOOK_DIR="$HOME/Documents/Projekte/Objekterkennung.yolo11/notebooks"
 
 # === INITIALIZATION ===
 

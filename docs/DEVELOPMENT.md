@@ -1,6 +1,6 @@
 # Development guide
 
-Development guidelines and technical documentation for the Objekterkennung.yolo11 project.
+Development guidelines and technical documentation for the Bookfinder project.
 
 > **For AI assistants**: This file contains important context information for working on this project.
 
@@ -16,7 +16,7 @@ eval "$(micromamba shell hook --shell zsh)"
 micromamba shell init --shell zsh --root-prefix=~/micromamba
 
 # Activate environment (if not automatically active)
-micromamba activate yolo11
+micromamba activate bookfinder
 
 # Execute Python scripts
 python3 script_name.py
@@ -24,10 +24,10 @@ python3 script_name.py
 
 The shell must be initialized for Micromamba before environment activation works. Use the dynamic initialization `eval "$(micromamba shell hook --shell zsh)"` in each new terminal session, or run the permanent setup once with `micromamba shell init`.
 
-Add needed packages to yolo11.condaenv.yml, then execute 1_create-conda-env.sh to update the Micromamba environment, followed by 2_setup_jupyter.sh, in case you do some work with Jupyter.
+Add needed packages to bookfinder.condaenv.yml, then execute 1_create-conda-env.sh to update the Micromamba environment, followed by 2_setup_jupyter.sh, in case you do some work with Jupyter.
 
 ### Python execution
-- In the "yolo11" environment, use `python3`, not `python`
+- In the "bookfinder" environment, use `python3`, not `python`
 - Execute scripts from project root
 
 
@@ -47,7 +47,7 @@ tests/
 ```bash
 # Initialize shell for Micromamba (if not done permanently)
 eval "$(micromamba shell hook --shell zsh)"
-micromamba activate yolo11
+micromamba activate bookfinder
 
 # Unit Tests
 python3 tests/test_lookup_utils.py
