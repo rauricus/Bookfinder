@@ -1,18 +1,80 @@
-# To train object detection using the LibVision dataset
+# Training the book spine detection model
 
-yolo task=detect mode=train model=yolo11s.pt data=/Users/andreas/Projekte/Objekterkennung.yolo11/datasets/data.yaml device=MPS epochs=10 imgsz=640 plots=True
+## Current model: YOLO26n-obb (train3)
 
-yolo task=detect mode=predict model=/Users/andreas/Projekte/Objekterkennung.yolo11/runs/detect/train/weights/best.pt conf=0.25 source=/Users/andreas/Projekte/Objekterkennung.yolo11/datasets/test/images save=True
+Training migrated from YOLO11n-obb to YOLO26n-obb in May 2026. YOLO26 is 43% faster on CPU,
+NMS-free (simpler edge export), and supports OBB. Requires `ultralytics 8.4.*`.
 
-# To train instance segmentation using the Book_Spine_2 dataset
+### Train
 
-yolo task=segment mode=train model=yolo11s-seg.pt data=/Users/andreas/Projekte/Objekterkennung.yolo11/datasets/Book_Spine_2/data.yaml device=MPS epochs=10 imgsz=640 plots=True
+```bash
+yolo task=obb mode=train \
+  model=yolo26n-obb.pt \
+  data="datasets/Book spine detection.v2.yolo8-obb/data.yaml" \
+  device=mps epochs=100 imgsz=320 batch=16 patience=100 \
+  project=train name=train3
+```
 
-yolo task=segment mode=predict model=/Users/andreas/Projekte/Objekterkennung.yolo11/runs/segment/train/weights/best.pt conf=0.25 source=/Users/andreas/Projekte/Objekterkennung.yolo11/datasets/Book_spine_2/test/images save=True 
+Key parameters:
+- `imgsz=320`: kept at 320 to fit within IMX500's ~8 MB weight memory limit
+- `device=mps`: Apple Silicon GPU; change to `cpu` or `cuda:0` as needed
+- No `dfl` loss weight — DFL is removed in YOLO26
 
+### Validate (benchmark against train2 baseline)
 
-# To train OBB object detection using the Book_Spine_2 dataset
+```bash
+# YOLO26 (new)
+yolo task=obb mode=val \
+  model=train/train3/weights/best.pt \
+  data="datasets/Book spine detection.v2.yolo8-obb/data.yaml"
 
-yolo task=obb mode=train model=yolo11s-obb.pt data=/Users/andreas/Projekte/Objekterkennung.yolo11/datasets/Book_Spine_2/data.yaml device=MPS epochs=10 imgsz=640 plots=True
+# YOLO11 baseline (train2) — target to beat
+yolo task=obb mode=val \
+  model=models/YOLO11-obb-n/detect-book-spines.train2.pt \
+  data="datasets/Book spine detection.v2.yolo8-obb/data.yaml"
+```
 
-yolo task=obb mode=predict model=/Users/andreas/Projekte/Objekterkennung.yolo11/runs/obb/train/weights/best.pt conf=0.25 source=/Users/andreas/Projekte/Objekterkennung.yolo11/example-files/books/Books_00005.png save=True
+Baseline (train2): mAP50 = 0.972, mAP50-95 = 0.807, precision = 0.963, recall = 0.939
+
+### Export for edge deployment
+
+**Track A — NCNN (Pi 5 CPU, ~14–15 FPS at 320×320):**
+```bash
+yolo export model=train/train3/weights/best.pt format=ncnn imgsz=320
+```
+Produces `best_ncnn_model/` with `.param` and `.bin` files. Runs without ultralytics on the Pi.
+
+**Track B — IMX500 (on-chip inference, OBB support untested):**
+```bash
+yolo export model=train/train3/weights/best.pt format=imx500 imgsz=320
+```
+If OBB ops are unsupported by the Sony converter, fall back to Track A or retrain as
+standard detection (`task=detect`) for IMX500.
+
+### Predict
+
+```bash
+yolo task=obb mode=predict \
+  model=train/train3/weights/best.pt \
+  conf=0.3 source=example-files/books/Books_00005.png save=True
+```
+
+---
+
+## Previous model: YOLO11n-obb (train2)
+
+Kept for reference. Model weights: `models/YOLO11-obb-n/detect-book-spines.train2.pt`
+
+```bash
+# Train (YOLO11, for reference only)
+yolo task=obb mode=train \
+  model=yolo11n-obb.pt \
+  data="datasets/Book spine detection.v2.yolo8-obb/data.yaml" \
+  device=mps epochs=100 imgsz=320 batch=16 \
+  project=train name=train2
+
+# Predict
+yolo task=obb mode=predict \
+  model=models/YOLO11-obb-n/detect-book-spines.train2.pt \
+  conf=0.3 source=example-files/books/Books_00005.png save=True
+```
