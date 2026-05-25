@@ -18,14 +18,22 @@ yolo task=obb mode=train \
 Key parameters:
 - `imgsz=320`: kept at 320 to fit within IMX500's ~8 MB weight memory limit
 - `device=mps`: Apple Silicon GPU; change to `cpu` or `cuda:0` as needed
-- No `dfl` loss weight — DFL is removed in YOLO26
+
+Note: in ultralytics 8.4, `project=train name=train3` saves to `runs/obb/train/train3/`
+(not `train/train3/` as in 8.3). This is expected behaviour.
+
+### Resume after crash
+
+```bash
+yolo resume model=runs/obb/train/train3/weights/last.pt
+```
 
 ### Validate (benchmark against train2 baseline)
 
 ```bash
 # YOLO26 (new)
 yolo task=obb mode=val \
-  model=train/train3/weights/best.pt \
+  model=runs/obb/train/train3/weights/best.pt \
   data="datasets/Book spine detection.v2.yolo8-obb/data.yaml"
 
 # YOLO11 baseline (train2) — target to beat
@@ -40,13 +48,13 @@ Baseline (train2): mAP50 = 0.972, mAP50-95 = 0.807, precision = 0.963, recall = 
 
 **Track A — NCNN (Pi 5 CPU, ~14–15 FPS at 320×320):**
 ```bash
-yolo export model=train/train3/weights/best.pt format=ncnn imgsz=320
+yolo export model=runs/obb/train/train3/weights/best.pt format=ncnn imgsz=320
 ```
 Produces `best_ncnn_model/` with `.param` and `.bin` files. Runs without ultralytics on the Pi.
 
 **Track B — IMX500 (on-chip inference, OBB support untested):**
 ```bash
-yolo export model=train/train3/weights/best.pt format=imx500 imgsz=320
+yolo export model=runs/obb/train/train3/weights/best.pt format=imx500 imgsz=320
 ```
 If OBB ops are unsupported by the Sony converter, fall back to Track A or retrain as
 standard detection (`task=detect`) for IMX500.
@@ -55,7 +63,7 @@ standard detection (`task=detect`) for IMX500.
 
 ```bash
 yolo task=obb mode=predict \
-  model=train/train3/weights/best.pt \
+  model=runs/obb/train/train3/weights/best.pt \
   conf=0.3 source=example-files/books/Books_00005.png save=True
 ```
 
