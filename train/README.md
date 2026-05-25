@@ -5,24 +5,27 @@
 Training migrated from YOLO11n-obb to YOLO26n-obb in May 2026. YOLO26 is 43% faster on CPU,
 NMS-free (simpler edge export), and supports OBB. Requires `ultralytics 8.4.*`.
 
-### Train
+### Train (with automatic resume on crash)
+
+Use the included script from the project root:
 
 ```bash
-yolo task=obb mode=train \
-  model=yolo26n-obb.pt \
-  data="datasets/Book spine detection.v2.yolo8-obb/data.yaml" \
-  device=mps epochs=100 imgsz=320 batch=16 patience=100 \
-  project=train name=train3
+./train/train.sh              # train3 with yolo26n-obb.pt (defaults)
+./train/train.sh train4       # next run, same model
+./train/train.sh train4 yolo26s-obb.pt  # next run with the small variant
 ```
 
-Key parameters:
-- `imgsz=320`: kept at 320 to fit within IMX500's ~8 MB weight memory limit
-- `device=mps`: Apple Silicon GPU; change to `cpu` or `cuda:0` as needed
+The script starts a fresh training if no checkpoint exists, resumes automatically after
+a crash, and exits cleanly once all epochs are done. See [train.sh](train.sh)
+for the full implementation.
+
+Key parameters: `imgsz=320` (IMX500 memory limit), `device=mps` (change to `cpu` or
+`cuda:0` as needed).
 
 Note: in ultralytics 8.4, `project=train name=train3` saves to `runs/obb/train/train3/`
 (not `train/train3/` as in 8.3). This is expected behaviour.
 
-### Resume after crash
+### Resume manually after crash
 
 ```bash
 yolo resume model=runs/obb/train/train3/weights/last.pt

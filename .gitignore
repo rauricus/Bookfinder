@@ -16,3 +16,4 @@ dictionaries
 books.db
 app.log
 bookshelves.db
+train/train3_stdout.log
