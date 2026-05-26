@@ -28,7 +28,7 @@ while true; do
     echo "Training complete ($(epochs_done)/$EPOCHS epochs)."
     break
   elif [[ -f "$WEIGHTS" ]]; then
-    yolo resume model="$WEIGHTS"
+    yolo train resume=True model="$WEIGHTS"
   else
     yolo task=obb mode=train \
       model="$MODEL" \

@@ -28,7 +28,7 @@ Note: in ultralytics 8.4, `project=train name=train3` saves to `runs/obb/train/t
 ### Resume manually after crash
 
 ```bash
-yolo resume model=runs/obb/train/train3/weights/last.pt
+yolo train resume=True model=runs/obb/train/train3/weights/last.pt
 ```
 
 ### Validate (benchmark against train2 baseline)
