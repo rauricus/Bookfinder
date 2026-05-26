@@ -19,8 +19,8 @@ NAME="${1:-train4}"
 MODEL="${2:-yolo26n-obb.pt}"
 EPOCHS="${3:-200}"
 
-WEIGHTS="runs/obb/train/${NAME}/weights/last.pt"
-RESULTS="runs/obb/train/${NAME}/results.csv"
+WEIGHTS="runs/obb/${NAME}/weights/last.pt"
+RESULTS="runs/obb/${NAME}/results.csv"
 
 epochs_done() { [[ -f "$RESULTS" ]] && echo $(( $(wc -l < "$RESULTS") - 1 )) || echo 0; }
 
@@ -36,7 +36,7 @@ while true; do
       "data=datasets/Book spine detection.v2.yolo8-obb/data.yaml" \
       device=mps epochs=$EPOCHS imgsz=320 batch=16 patience=100 \
       lr0=0.005 \
-      project=train name="$NAME"
+      name="$NAME"
   fi
   [[ $? -eq 0 ]] && break
   echo "Crashed (exit $?), resuming in 5s..."; sleep 5
