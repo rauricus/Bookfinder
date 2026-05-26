@@ -3,20 +3,21 @@
 # Trains a YOLO26 OBB model and resumes automatically after crashes.
 # Requires the bookfinder environment to be active.
 #
-# Usage: ./train/train.sh [name] [model]
-#   name   Training run name (default: train3)
-#   model  Base model file   (default: yolo26n-obb.pt)
+# Usage: ./train/train.sh [name] [model] [epochs]
+#   name    Training run name (default: train4)
+#   model   Base model file   (default: yolo26n-obb.pt)
+#   epochs  Number of epochs  (default: 200)
 #
 # Examples:
-#   ./train/train.sh                          # train3 with yolo26n-obb.pt
-#   ./train/train.sh train4                   # train4 with yolo26n-obb.pt
-#   ./train/train.sh train4 yolo26s-obb.pt    # train4 with the small variant
+#   ./train/train.sh                               # train4 with yolo26n-obb.pt, 200 epochs
+#   ./train/train.sh train4 yolo26n-obb.pt 100    # train4 with 100 epochs
+#   ./train/train.sh train5 yolo26n-obb.pt 200    # train5
 
 cd "${0:A:h}/.."  # always run relative to project root
 
-NAME="${1:-train3}"
+NAME="${1:-train4}"
 MODEL="${2:-yolo26n-obb.pt}"
-EPOCHS=100
+EPOCHS="${3:-200}"
 
 WEIGHTS="runs/obb/train/${NAME}/weights/last.pt"
 RESULTS="runs/obb/train/${NAME}/results.csv"
@@ -34,6 +35,7 @@ while true; do
       model="$MODEL" \
       "data=datasets/Book spine detection.v2.yolo8-obb/data.yaml" \
       device=mps epochs=$EPOCHS imgsz=320 batch=16 patience=100 \
+      lr0=0.005 \
       project=train name="$NAME"
   fi
   [[ $? -eq 0 ]] && break
