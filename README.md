@@ -7,19 +7,11 @@ Recognition and lookup of books in photos or video streams.
 This code recognizes book spines in images, extracts text via OCR, and looks up those texts in various library databases to help you identify the books.
 
 ### Pipeline
-1. **Book Spine Detection** → YOLO11 OBB Model
-2. **Text Area Detection** → EAST Model  
-3. **OCR** → Tesseract
-4. **Text Correction** → SymSpell + Dictionaries
+1. **Book Spine Detection** → YOLO26n OBB Model (edge: AABB on IMX500, OBB refinement on Pi 5)
+2. **Deskew** → affine transform based on OBB angle
+3. **OCR** → Tesseract or EasyOCR (to be evaluated) on deskewed crop
+4. **Text Correction** *(optional, currently disabled)* → SymSpell + region-specific title/author DB
 5. **Library Lookup** → Swisscovery, Google Books, DNB, lobid GND, OpenLibrary
-
-## Help wanted
-
-**Contributions are very welcome!**
-
-I know a bit of everything, but not enough currently to make this work truly great. This is an interdisciplinary project that requires expertise in several fields and topics - which is why I started it in the first place!
-
-Ping me, if you believe you can help with improving image processing, text detection, data lookup or the AI model. Or with whatever you think needs improvement.
 
 ## Quick Start
 
@@ -83,21 +75,47 @@ python3 tests/test_lookup_utils.py
 
 The goal is to turn Bookfinder into a portable, self-contained edge device that can scan a bookshelf and immediately show which books it recognises, with full analysis optionally deferred to a later step.
 
-### Step 1 – Migrate model to YOLO26 (in progress)
-The book spine detection model is being retrained on YOLO26n-obb (from YOLO11n-obb). YOLO26 is 43% faster on CPU than YOLO11, is NMS-free (simpler edge export), and still supports OBB. Training parameters remain the same as train2 (imgsz=320, 100 epochs, MPS device). Target: mAP50 ≥ 0.972, mAP50-95 ≥ 0.807 (current baseline from train2).
+### Planned edge device pipeline
+
+```
+IMX500 (on-chip):  Standard AABB detection → bounding boxes per spine
+Pi 5:              For each crop:
+                     1. Aspect ratio check → rotate 90° if spine is vertical (covers ~95% of cases)
+                     2. OBB refinement → precise spine box + angle (handles remaining tilt)
+                     3. Deskew (affine transform)
+                     4. OCR (Tesseract or EasyOCR — to be evaluated)
+                     5. Book lookup (local SQLite DB)
+```
+
+AABB on the IMX500 is reliably supported. The aspect ratio check (step 1) is free and handles the majority of upright books. OBB runs as a refinement step on the Pi 5 for cases with residual tilt — the nano model is fast enough (~5–10ms per crop) to run unconditionally. After deskewing, both Tesseract and EasyOCR work well on an upright crop; EasyOCR may have an edge on multi-language spines but this needs evaluation.
+
+### Step 1 – YOLO26n model training (in progress)
+
+Target: match or beat the train2 baseline (YOLO11n-obb: mAP50=0.972, mAP50-95=0.807).
+
+| Run | Model | Epochs | lr0 | mAP50 | mAP50-95 |
+|-----|-------|--------|-----|-------|----------|
+| train2 | YOLO11n-obb | 100 | 0.010 | **0.972** | **0.807** |
+| train3 | YOLO26n-obb | 100 | 0.010 | 0.951 | 0.765 |
+| train4 | YOLO26n-obb | 200 | 0.005 | 0.959 | 0.791 |
+
+train4 converged at epoch ~140 — more epochs will not help further. Next steps: **expand the dataset** and **increase rotation augmentation** (`degrees`, `shear`, `perspective` are currently 0, which is a missed opportunity for OBB training).
 
 ### Step 2 – Edge hardware
-Target hardware: **Raspberry Pi 5 (4 GB)** with the **Raspberry Pi AI Camera (IMX500)**. The Pi 5 resolves the memory and segfault issues that affected the Pi 3B+. A HAT battery (e.g. PiSugar 3 Plus) provides 2–3h of runtime under load.
+
+Target hardware: **Raspberry Pi 5 (4 GB)** with the **Raspberry Pi AI Camera (IMX500)**. A HAT battery (e.g. PiSugar 3 Plus) provides 2–3h of runtime under load. 
 
 ### Step 3 – Model export for edge deployment (two tracks)
-After training, the model will be exported and tested in two formats:
+
 - **Track A – NCNN** (Pi 5 CPU): documented to work, ~14–15 FPS for yolo26n at 320×320
-- **Track B – IMX500 RPK**: runs the model on the camera chip itself with minimal CPU use; OBB support on the IMX500 is untested and may require fallback to standard detection
+- **Track B – IMX500 RPK**: AABB-only model (standard detection, not OBB) runs on-chip; OBB refinement then runs on the Pi 5 CPU
 
 ### Step 4 – Camera capture & live feedback
+
 Replace the current photo-upload workflow with a `picamera2`-based capture mode that shows recognised book spines as a live overlay. First milestone: real-time bounding boxes on a Pi display.
 
 ### Step 5 – Offline book database & delta detection
+
 - Compact local SQLite built from an OpenLibrary data dump (ISBN + title + author, ~500 MB–1 GB) for offline lookup without internet access
 - Per-scan shelf snapshots to detect what is new or missing compared to the previous scan ("delta mode")
 
@@ -120,10 +138,9 @@ Replace the current photo-upload workflow with a `picamera2`-based capture mode 
     * Am I maybe combining too many boxes here, creating multiple line boxes, where single line ones would be better? Here's an approach (see last comment) that may work better:
         https://stackoverflow.com/questions/20831612/getting-the-bounding-box-of-the-recognized-words-using-python-tesseract
     Maybe it's already enough to rule out bounding boxes with confidence -1, as these are "corresponding to _boxes_ of text".
-* Text processing:
-    * The basic text processing is inefficient: the set of accepted characters is computed several times.
-    * The auto-correction of texts is always done with the German dictionary. It really should be language sensitive. (CHECK IF THIS IS STILL CORRECT)
-    * The book titles in the book titles dictionary could come from EDITIONS in OpenLibrary, as those titles would be localized. This is due to many entries in OL being stored in English by default, but then their EDITIONS contain the actual, localized title. We can extract this in the future - it's too complex for now.
+* Text correction:
+    * Currently disabled. Book spine text is not "normal" language — it mixes titles, author names, publishers and series names, which confuses standard spell correction. A useful correction database would need to be large, region-specific (e.g. titles available in Switzerland), and regularly updated. The database has been built before but consistently produced more errors than it fixed. Re-enabling this step only makes sense once the database quality and coverage are substantially improved.
+
 * Book title lookup:
     * Search in Swisscovery and Lobid GND often returns no results, because the book titles found on book spines often include the author names.
         * We can maybe detect (and remove) author names by comparing them against our authors database.
