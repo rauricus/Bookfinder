@@ -2,14 +2,14 @@ __pycache__
 
 .env
 
-datasets/backups
-datasets/LibVision
-datasets/Book_spine_2
-datasets/Bookspine_text_blocks
+datasets/*
+!datasets/README*.md
+!datasets/*.md
+
 runs
 output
 
-yolo11*.pt
+yolo*.pt
 models/east_text_detection.pb
 
 dictionaries

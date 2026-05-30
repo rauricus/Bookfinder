@@ -2,47 +2,46 @@
 
 ## Directory structure
 
-Each completed training run is stored here:
-
 ```
 train/
-  train1/   YOLO11s-obb, 10 epochs, different dataset (exploration, not production)
-  train2/   YOLO11n-obb, 100 epochs — best model, active in book_finder.py
-  train3/   YOLO26n-obb, 100 epochs
+  obb/         OBB model (YOLO26n-obb) — Pi 5 refinement
+    train1/    YOLO11s-obb, 10 epochs (exploration)
+    train2/    YOLO11n-obb, 100 epochs, mAP50=0.972 — previous best
+    train3/    YOLO26n-obb, 100 epochs, mAP50=0.951
+    train4/    YOLO26n-obb, 200 epochs, mAP50=0.959
+    train5/    YOLO26n-obb, P2 dataset — current
+    train_obb.sh
+  aabb/        AABB model (YOLO11n) — IMX500 on-chip inference
+    train1/    YOLO11n-detect, P2 dataset — current
+    train_aabb.sh
 ```
 
 Each run contains: `args.yaml` (hyperparameters), `results.csv` (per-epoch metrics), `weights/best.pt` and `weights/last.pt`.
 
-The production models are also stored under `models/` — see `models/README.md`.
-
-Plots (learning curves, confusion matrix, PR curves) are written by YOLO to `runs/` during training but are **not checked in**, as they can be regenerated at any time:
-
-```bash
-yolo task=obb mode=val \
-  model=train/train2/weights/best.pt \
-  data="datasets/Book spine detection.v2.yolo8-obb/data.yaml" \
-  plots=True
-```
+Production models are stored under `models/obb/` and `models/aabb/` — see `models/README.md`.
 
 ---
 
-## Starting a new training run
+## Starting a training run
 
+**OBB model (Pi 5, YOLO26n-obb, imgsz=640):**
 ```bash
-./train/train.sh              # train4 with yolo26n-obb.pt (next run)
-./train/train.sh train4 yolo26s-obb.pt  # with the small variant
+./train/obb/train_obb.sh              # train5, 200 epochs
+./train/obb/train_obb.sh train5 yolo26n-obb.pt 200
 ```
 
-The script starts a fresh training if no checkpoint exists, resumes automatically after a crash, and exits cleanly once all epochs are done.
+**AABB model (IMX500, YOLO11n-detect, imgsz=320):**
+```bash
+./train/aabb/train_aabb.sh            # train1, 200 epochs
+./train/aabb/train_aabb.sh train1 yolo11n.pt 200
+```
 
-After training, manually consolidate `runs/` into `train/trainN/` and copy the model to `models/`.
-
-Key parameters: `imgsz=320` (IMX500 memory limit), `device=mps` (change to `cpu` or `cuda:0` as needed).
+Both scripts start fresh if no checkpoint exists, resume automatically after a crash, and exit cleanly when done. After training, consolidate `runs/` into the appropriate `trainN/` folder and copy the model to `models/`.
 
 ### Resuming manually after a crash
-
 ```bash
-yolo train resume=True model=runs/obb/trainN/weights/last.pt
+yolo train resume=True model=runs/obb/train5/weights/last.pt
+yolo train resume=True model=runs/detect/train1/weights/last.pt
 ```
 
 ---
@@ -50,29 +49,29 @@ yolo train resume=True model=runs/obb/trainN/weights/last.pt
 ## Validation
 
 ```bash
-# train2 (active model)
+# OBB (train5)
 yolo task=obb mode=val \
-  model=train/train2/weights/best.pt \
-  data="datasets/Book spine detection.v2.yolo8-obb/data.yaml"
+  model=train/obb/train5/weights/best.pt \
+  "data=datasets/Book spine detection P2.obb/data.yaml"
 
-# train3
-yolo task=obb mode=val \
-  model=train/train3/weights/best.pt \
-  data="datasets/Book spine detection.v2.yolo8-obb/data.yaml"
+# AABB (train1)
+yolo task=detect mode=val \
+  model=train/aabb/train1/weights/best.pt \
+  "data=datasets/Book spine detection P2.aabb/data.yaml"
 ```
 
 ---
 
 ## Export for edge deployment
 
-**Track A — NCNN (Pi 5 CPU, ~14–15 FPS at 320×320):**
+**OBB model → NCNN (Pi 5 CPU):**
 ```bash
-yolo export model=train/train2/weights/best.pt format=ncnn imgsz=320
+yolo export model=train/obb/train5/weights/best.pt format=ncnn imgsz=640
 ```
 
-**Track B — IMX500 (on-chip inference, OBB support untested):**
+**AABB model → IMX500:**
 ```bash
-yolo export model=train/train2/weights/best.pt format=imx500 imgsz=320
+yolo export model=train/aabb/train1/weights/best.pt format=imx500 imgsz=320
 ```
 
 ---
@@ -81,6 +80,6 @@ yolo export model=train/train2/weights/best.pt format=imx500 imgsz=320
 
 ```bash
 yolo task=obb mode=predict \
-  model=train/train2/weights/best.pt \
+  model=train/obb/train5/weights/best.pt \
   conf=0.3 source=example-files/books/Books_00005.png save=True
 ```
