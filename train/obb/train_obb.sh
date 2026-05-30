@@ -50,7 +50,7 @@ while true; do
       "data=datasets/Book spine detection P2.obb/data.yaml" \
       device=mps epochs=$EPOCHS imgsz=640 batch=8 patience=50 \
       lr0=0.01 \
-      degrees=15 shear=5 perspective=0.001 hsv_v=0.4 blur=0.01 \
+      degrees=15 shear=5 perspective=0.001 hsv_v=0.4 \
       name="$NAME"
   fi
   [[ $? -eq 0 ]] && break

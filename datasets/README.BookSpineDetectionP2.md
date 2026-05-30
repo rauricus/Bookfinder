@@ -52,7 +52,7 @@ OBB model (Pi 5):    yolo26n-obb.pt, imgsz=640
 AABB model (IMX500): yolo11n.pt,     imgsz=320
 
 Both with dynamic augmentation in training config (applied randomly each epoch):
-  degrees=15, shear=5, perspective=0.001, hsv_v=0.4, blur=0.01
+  degrees=15, shear=5, perspective=0.001, hsv_v=0.4
 
 No augmentation baked into the dataset — YOLO's dynamic augmentation is more effective
 (random per epoch, 3× faster training than with a 3x augmented dataset).

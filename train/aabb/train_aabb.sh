@@ -43,14 +43,14 @@ while true; do
     echo "Training complete ($(epochs_done)/$EPOCHS epochs)."
     break
   elif [[ -f "$WEIGHTS" ]]; then
-    yolo train resume=True model="$WEIGHTS"
+    micromamba run -n bookfinder yolo train resume=True model="$WEIGHTS"
   else
-    yolo task=detect mode=train \
+    micromamba run -n bookfinder yolo task=detect mode=train \
       model="$MODEL" \
       "data=datasets/Book spine detection P2.aabb/data.yaml" \
       device=mps epochs=$EPOCHS imgsz=320 batch=16 patience=50 \
       lr0=0.01 \
-      degrees=15 shear=5 perspective=0.001 hsv_v=0.4 blur=0.01 \
+      degrees=15 shear=5 perspective=0.001 hsv_v=0.4 \
       name="$NAME"
   fi
   [[ $? -eq 0 ]] && break
