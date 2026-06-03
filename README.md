@@ -78,16 +78,31 @@ The goal is to turn Bookfinder into a portable, self-contained edge device that 
 ### Planned edge device pipeline
 
 ```
-IMX500 (on-chip):  Standard AABB detection → bounding boxes per spine
-Pi 5:              For each crop:
-                     1. Aspect ratio check → rotate 90° if spine is vertical (covers ~95% of cases)
-                     2. OBB refinement → precise spine box + angle (handles remaining tilt)
-                     3. Deskew (affine transform)
-                     4. OCR (Tesseract or EasyOCR — to be evaluated)
-                     5. Book lookup (local SQLite DB)
+IMX500 (on-chip):  AABB detection → bounding boxes per spine
+
+Pi 5:              Classify each AABB box by aspect ratio:
+
+  Upright  (h >> w)  → crop from full-res image
+                       → OCR in 0° and 180°, keep better result
+
+  Sideways (w >> h)  → crop from full-res image
+                       → OCR in 90°CW and 90°CCW, keep better result
+
+  Tilted   (square-ish / ambiguous aspect ratio):
+                       → merge overlapping/adjacent AABB boxes into one ROI
+                       → crop ROI from full-res image
+                       → OBB on Pi 5 → N oriented bounding boxes within ROI
+                       → for each OBB crop: deskew → OCR in 0° and 180°
+
+  All paths:         → Book lookup (local SQLite DB)
 ```
 
-AABB on the IMX500 is reliably supported. The aspect ratio check (step 1) is free and handles the majority of upright books. OBB runs as a refinement step on the Pi 5 for cases with residual tilt — the nano model is fast enough (~5–10ms per crop) to run unconditionally. After deskewing, both Tesseract and EasyOCR work well on an upright crop; EasyOCR may have an edge on multi-language spines but this needs evaluation.
+**Rationale:**
+- AABB on the IMX500 is reliable and runs on-chip without Pi CPU cost.
+- Upright and sideways books (the large majority on a typical shelf) never need OBB — the AABB crop is already well-aligned.
+- OBB runs only on the "tilted" subset, which keeps Pi CPU load low. Merging overlapping AABB boxes before cropping gives OBB enough context to correctly segment multiple adjacent tilted spines in one pass.
+- OCR orientation is resolved by running two directions and picking the result with more dictionary matches. (Explicit orientation detection is not reliable enough to use as a pre-filter.)
+- EasyOCR vs. Tesseract: to be evaluated on real Pi hardware for speed/accuracy trade-off.
 
 ### Step 1 – YOLO26n model training (in progress)
 
