@@ -12,7 +12,7 @@ train/
     train5/    YOLO26n-obb, P2 dataset — current
     train_obb.sh
   aabb/        AABB model (YOLO11n) — IMX500 on-chip inference
-    train1/    YOLO11n-detect, P2 dataset — current
+    train1/    YOLO11n-detect, P2 dataset, 200 epochs, mAP50=0.959 — current
     train_aabb.sh
 ```
 
