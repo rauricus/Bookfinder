@@ -5,11 +5,16 @@
 # This image is built and run with `--platform linux/amd64` (emulated on Apple Silicon) so the
 # whole export/quantization toolchain works locally. See deploy/imx500/export_imx500.sh.
 #
-# The IMX-specific extras (model-compression-toolkit, sony-custom-layers, imx500-converter[pt],
-# onnx, onnxruntime, onnxsim, edge-mdt-tpc) are intentionally NOT pre-installed here: Ultralytics
-# auto-installs the versions it is compatible with on the first `yolo export format=imx` run.
-# That first run therefore needs network access (docker run has it by default). If the known
-# sony_custom_layers install friction appears (ultralytics#22662), pin the versions below.
+# The IMX toolchain is PINNED and pre-installed here (not left to Ultralytics' runtime
+# auto-install) because that auto-install resolves dependencies incrementally and drifts into
+# broken combinations. Two conflicts were hit and fixed by the pins below:
+#   1. protobuf/tensorboard mismatch -> resolved by installing the whole stack in one pass.
+#   2. model-compression-toolkit floats to 2.6.0, which needs edge-mdt-cl>=1.1.0 (MulticlassNMSOBB),
+#      but Ultralytics requires edge-mdt-cl<1.1.0. Pin MCT==2.4.5, the newest that pairs with 1.0.0.
+# Also: the Sony packager (sdspconv) is a Java 17+ app -> Java 21 is required (default-jre was too
+# old); and the converter backend needs the `imx500-converter[pt]` extra, not the bare package.
+# Do NOT bump model-compression-toolkit past 2.5 without re-pinning edge-mdt-cl, or the export
+# silently rebreaks. Exact transitive versions are frozen in requirements.lock.txt.
 
 FROM --platform=linux/amd64 ubuntu:22.04
 
@@ -17,11 +22,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     YOLO_CONFIG_DIR=/tmp/Ultralytics
 
-# System deps: Python 3.10 (matches the project's conda env), a JRE for the Sony converter,
-# git, and the OpenCV runtime libs Ultralytics needs.
+# System deps: Python 3.10, Java 21 (Sony packager needs >=17), git, and OpenCV runtime libs.
+# openjdk-21-jre-headless is the only JRE installed, so it becomes the default `java`.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 python3-pip python3-venv \
-        default-jre-headless \
+        openjdk-21-jre-headless \
         git \
         libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
@@ -30,6 +35,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip3 install --no-cache-dir \
         torch torchvision --index-url https://download.pytorch.org/whl/cpu
 RUN pip3 install --no-cache-dir ultralytics
+
+# Pinned IMX export toolchain. numpy<2 / opencv-python<5 keep the MCT/tensorflow stack coherent.
+RUN pip3 install --no-cache-dir \
+        "numpy<2" \
+        "opencv-python<5" \
+        "model-compression-toolkit==2.4.5" \
+        "edge-mdt-cl==1.0.0" \
+        "edge-mdt-tpc>=1.2.0" \
+        "pydantic<2.12" \
+        "imx500-converter[pt]" \
+        "sony-custom-layers[pt]" \
+        onnx onnxruntime onnxsim
+
+# Fail the build early if the toolchain can't import or the converter binary is missing.
+RUN python3 -c "import model_compression_toolkit as m; print('MCT', m.__version__)" \
+    && imxconv-pt --version \
+    && java -version
 
 WORKDIR /workspace
 
