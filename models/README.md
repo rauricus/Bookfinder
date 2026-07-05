@@ -32,3 +32,22 @@ All models detect a single class (`book-spine`).
 ## Notes — AABB
 
 **aabb/train1** — First AABB model (YOLO11n-detect) trained on P2 dataset for IMX500 on-chip inference. 200 epochs, imgsz=320, lr0=0.01. Best mAP50=0.9588 at epoch 146. Results: `train/aabb/train1/`.
+
+## IMX500 Deployable (`models/aabb/imx500/`)
+
+Quantized INT8 export of `aabb/train1` for on-sensor inference on the Raspberry Pi AI Camera.
+Produced by `deploy/imx500/export_imx500.sh` (see `deploy/imx500/README.md` for the full pipeline).
+
+| File | Purpose |
+|------|---------|
+| `packerOut.zip` | The network payload uploaded to the IMX500 sensor (via Aitrios modlib) |
+| `labels.txt` | Class names (`book-spine`) |
+| `model_imx_MemoryReport.json` | On-chip memory report |
+
+- **Source:** `aabb/YOLO11-n/detect-book-spines.train1.pt` · imgsz=320 · INT8 PTQ
+- **Calibration:** 160 images (`fraction=0.15`). This is the ceiling that fits the exporter's memory
+  peak on a 24 GiB Mac (Docker VM ≤20 GiB); `fraction≥0.2` OOM-kills the Sony packager. Sony
+  recommends >300 images — regenerate on a larger x86 host to raise calibration quality.
+- **On-chip fit:** `Fit In Chip: true`, 48% memory utilization (3.80 / 8.00 MB).
+- **Accuracy:** INT8 retains **92.7%** of the FP32 detections on the 8 `example-files/books/`
+  shelves (115 vs 124 at conf=0.5, imgsz=320).

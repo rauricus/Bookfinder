@@ -123,7 +123,7 @@ Target hardware: **Raspberry Pi 5 (4 GB)** with the **Raspberry Pi AI Camera (IM
 ### Step 3 – Model export for edge deployment (two tracks)
 
 - **Track A – NCNN** (Pi 5 CPU): documented to work, ~14–15 FPS for yolo26n at 320×320
-- **Track B – IMX500 RPK**: AABB-only model (standard detection, not OBB) runs on-chip; OBB refinement then runs on the Pi 5 CPU
+- **Track B – IMX500** ✅ *export done*: AABB-only model (`aabb/train1`) quantized to INT8 and packaged for on-chip inference; OBB refinement then runs on the Pi 5 CPU. Deployable artifact at `models/aabb/imx500/` (`packerOut.zip` + `labels.txt`), `Fit In Chip: true` @ 48% util, 92.7% detection retention vs FP32. Full pipeline + resume/rebuild notes in [`deploy/imx500/README.md`](deploy/imx500/README.md). Remaining: on-sensor deployment on the Pi (Step below), and an optional higher-`fraction` recalibration on a larger x86 host.
 
 ### Step 4 – Camera capture & live feedback
 
@@ -139,7 +139,7 @@ Replace the current photo-upload workflow with a `picamera2`-based capture mode 
 - Offline book database — all lookups currently require internet access
 - Delta detection — comparing current scan against a previous shelf snapshot
 - Edge UI — a simplified fullscreen interface suitable for a handheld device
-- IMX500 deployment — model export and on-chip inference not yet implemented
+- IMX500 deployment — model export ✅ done (`models/aabb/imx500/`); on-chip inference on the Pi not yet run (needs the Pi flashed with `imx500-all`)
 
 ## What doesn't work so well
 * Bounding boxes: 

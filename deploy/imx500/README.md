@@ -38,9 +38,17 @@ model, the P2 aabb data.yaml, `imgsz=320`, `fraction=0.5` (~534 of the 1069 val 
 calibration). The pinned toolchain is pre-installed in the image, so the export runs fully offline;
 it is still slow under x86 emulation (~10–15 min for the 534-image quantization).
 
-> **Docker memory:** the 534-image quantization needs **≥16 GiB** allocated to Docker Desktop
-> (Settings → Resources → Memory). At the 8 GiB default it OOM-kills mid-quantization (exit 137).
-> Lower memory works only with a smaller `fraction` (e.g. `0.02` ≈ 21 images, proven to complete).
+> **Docker memory:** the exporter's memory peak is cumulative across the whole run, so the OOM lands late.
+> On a 24 GiB Mac (Docker VM capped at ~20 GiB) the ceiling that completes is **`fraction=0.15`
+> (~160 images)**. Larger fractions OOM-kill (exit 137, `OOMKilled=true`) progressively later:
+> `0.5` dies right after calibration, `0.3` after the MIP solve, `0.2` on the final packaging line.
+> This matches a known upstream issue ([ultralytics#22512](https://github.com/ultralytics/ultralytics/issues/22512));
+> the maintainers' fix is to **run the export on a larger x86 Linux host**. To get Sony's
+> recommended >300 calibration images, regenerate on a cloud box with ≥48 GiB (see *Next steps*).
+>
+> Diagnosing OOM: run the container **detached** (`docker run -d`, no `--rm`) and read the true
+> cause with `docker inspect -f '{{.State.OOMKilled}} {{.State.ExitCode}}' <name>` — a plain
+> foreground run just prints "Killed" and `--rm` erases the evidence.
 
 ## How to deploy on the Pi
 
@@ -56,17 +64,26 @@ python deploy/imx500/detect_bookspines_imx500.py
 
 ## Next steps
 
-**Next action:** run the full-quality export (Docker allocated ≥16 GiB):
-```bash
-./deploy/imx500/export_imx500.sh
-```
-Then continue with Phase 3 (validate) and Phase 4 (store artifacts). The export toolchain is fully
-solved and reproducible — the only thing left in Phase 2 is a clean run that survives the OOM.
+**Local export is done** — a deployable INT8 model exists at `models/aabb/imx500/`
+(`packerOut.zip` + `labels.txt` + `MemoryReport`), built at `fraction=0.15` (160 calib images),
+`Fit In Chip: true` @ 48%, and validated at **92.7% detection retention** vs FP32 (115 vs 124 on
+the 8 example shelves). Good enough to deploy; the one open improvement is calibration quality.
 
-The pipeline is **already proven end-to-end**: an earlier `fraction=0.02` (21-image) run completed
-quantization *and* the Sony converter, producing a valid `packerOut.zip` + `model_imx.onnx` +
-`MemoryReport` (memory: 48% util, `Fit In Chip: true`). That partial artifact was intentionally
-cleared; the pending run just redoes it with 534 calibration images for better INT8 accuracy.
+**Next action — higher-accuracy rebuild on a larger x86 host (cloud).** The 24 GiB Mac can't fit
+Sony's recommended >300 calibration images (see the Docker-memory note above). On a native-x86
+box with ≥48 GiB the same toolchain runs the full `fraction=0.5` (or `1.0`) with no bisection and
+no emulation tax:
+```bash
+# On an Ubuntu x86 VM (e.g. Hetzner/DigitalOcean) with Docker installed:
+#   1. copy this repo (or just the .pt model + the calibration dataset)
+#   2. run the SAME script — the Dockerfile targets linux/amd64 natively:
+./deploy/imx500/export_imx500.sh   # defaults to fraction=0.5, ~534 images
+#   3. copy the resulting packerOut.zip + labels.txt back into models/aabb/imx500/
+```
+Expect only a modest accuracy gain (INT8 calibration statistics plateau past a few hundred images),
+but it lifts calibration into Sony's recommended range and closes most of the 7.3% gap.
+
+Then re-run Phase 3 validation and swap the higher-accuracy artifact into `models/aabb/imx500/`.
 
 ## Verified working toolchain (baked into the image; frozen in `requirements.lock.txt`)
 
@@ -82,9 +99,9 @@ Legend: ✅ done · 🔜 next · ⬜ todo · ⏸️ blocked (needs hardware)
 
 - ✅ **Phase 0** — Verify FP32 model on all 8 example shelves (124 detections)
 - ✅ **Phase 1** — Export environment: `Dockerfile` (pinned toolchain, Java 21) + `export_imx500.sh` + `requirements.lock.txt`. Docker `linux/amd64` emulation verified.
-- 🔜 **Phase 2** — Full-quality export (534 calib images). Toolchain solved; pipeline proven at 21 images. **Remaining: one clean 534-image run with ≥16 GiB Docker memory** (see *Next steps*). Then check `model_imx_MemoryReport.json` (already known to fit: 48% util).
-- ⬜ **Phase 3** — Validate the quantized model on the 8 example images; detection count must stay within a small tolerance of the FP32 baseline (124). First inspect `model_imx.onnx` output signature, then reuse the loop in `detect_bookspines.py:77-106`. Levers if it regresses: more calibration images, try `imgsz=640`.
-- ⬜ **Phase 4** — Save deployable subset (`packerOut.zip`, `labels.txt`, `MemoryReport`) to `models/aabb/imx500/`; update `models/README.md` + main `README.md` roadmap.
+- ✅ **Phase 2** — Export produced a valid `packerOut.zip`. Full 534-image run OOM-kills even at ~20 GiB Docker memory (the peak is cumulative + a Java packager on top); `fraction=0.15` (160 images) is the ceiling that completes locally. `model_imx_MemoryReport.json`: `Fit In Chip: true`, 48% util. A full-fraction rebuild belongs on a bigger x86 host (see *Next steps*).
+- ✅ **Phase 3** — Validated INT8 vs FP32 on the 8 shelves at conf=0.5, imgsz=320: **115 vs 124 detections (92.7% retention)**, two shelves identical. Ultralytics loads the `_imx_model/` dir directly for predict (registers Sony custom layers) — no manual ONNX output parsing needed.
+- ✅ **Phase 4** — Deployable subset saved to `models/aabb/imx500/` (`packerOut.zip`, `labels.txt`, `MemoryReport`); `models/README.md` gained an IMX500 section and the main `README.md` roadmap (Step 3 Track B) marked done. Raw `_imx_model/` export dir git-ignored.
 - ⏸️ **Phase 5** — Deploy `detect_bookspines_imx500.py` on the Pi + AI Camera; confirm on-sensor detection + rough FPS. (Needs the Pi flashed with `imx500-all`.)
 
 **Out of scope here (roadmap Step 4):** live bounding-box overlay UI, aspect-ratio routing into
