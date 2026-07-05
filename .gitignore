@@ -12,6 +12,10 @@ output
 yolo*.pt
 models/east_text_detection.pb
 
+# Raw IMX500 export output (build artifact). The deployable subset is committed
+# separately under models/aabb/imx500/ (packerOut.zip + labels.txt + MemoryReport).
+*_imx_model/
+
 dictionaries
 books.db
 app.log
