@@ -33,8 +33,22 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Building export image (${IMAGE}, linux/amd64)…"
-docker build --platform linux/amd64 -t "$IMAGE" -f deploy/imx500/Dockerfile deploy/imx500
+# Skip the build when a current image already exists. "Current" = the image was built from
+# the Dockerfile as it stands now; we bake the Dockerfile's hash into a label and compare.
+# This makes repeat exports fully offline (no base-image metadata fetch) and near-instant.
+# Force a rebuild anytime with:  FORCE_BUILD=1 ./deploy/imx500/export_imx500.sh
+DOCKERFILE="deploy/imx500/Dockerfile"
+WANT_HASH="$(shasum -a 256 "$DOCKERFILE" | cut -d' ' -f1)"
+HAVE_HASH="$(docker image inspect "$IMAGE" --format '{{ index .Config.Labels "dockerfile_sha256" }}' 2>/dev/null || true)"
+
+if [[ -z "$FORCE_BUILD" && "$WANT_HASH" == "$HAVE_HASH" ]]; then
+  echo "==> Reusing export image (${IMAGE}); Dockerfile unchanged (sha256 ${WANT_HASH:0:12}…)"
+else
+  echo "==> Building export image (${IMAGE}, linux/amd64)…"
+  docker build --platform linux/amd64 \
+    --label "dockerfile_sha256=$WANT_HASH" \
+    -t "$IMAGE" -f "$DOCKERFILE" deploy/imx500
+fi
 
 echo "==> Running IMX500 export…"
 echo "    model=$MODEL  imgsz=$IMGSZ  fraction=$FRACTION"
